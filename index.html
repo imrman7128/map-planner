@@ -946,6 +946,7 @@ function renderMarkers(){
   if(window._refreshLabels)window._refreshLabels();
   // Re-apply utilization colors after any render (handles layer color changes, new points, etc.)
   if(window._applyUtilColors)window._applyUtilColors();
+  if(window._reexpandClusters)window._reexpandClusters();
 }
 
 // ── Virtual-scrolled points list ────────────────────────────────────────────
@@ -1069,7 +1070,7 @@ window.flyTo=function(nid){
     const vm=mMap[nid];
     if(vm){
       const parent=vm.__parent;
-      if(parent&&parent._group)parent._group.zoomToShowLayer(vm,()=>vm.openPopup());
+      if(parent&&parent._group&&parent._group.hasLayer(vm))parent._group.zoomToShowLayer(vm,()=>vm.openPopup());
       else vm.openPopup();
     }
   },300);
@@ -1723,47 +1724,55 @@ function openImport(lid){
   // An unclustered LayerGroup holds these temporary direct markers per layer.
   const unclustered={}; // layerId → L.LayerGroup of temp markers
 
-  function expandAll(){
+  // Bring the expanded set in line with the current viewport: markers that
+  // left the view go back into their cluster group, newly visible ones come out.
+  function syncExpanded(){
     const bounds=map.getBounds().pad(0.1);
+    Object.entries(unclustered).forEach(([lid,lg])=>{
+      const cg=clusterGroups[lid];
+      if(!cg||!map.hasLayer(cg)){
+        lg.getLayers().forEach(m=>{lg.removeLayer(m);if(cg)cg.addLayer(m);});
+        map.removeLayer(lg);delete unclustered[lid];
+      }
+    });
     Object.entries(clusterGroups).forEach(([lid,cg])=>{
-      if(!map.hasLayer(cg))return;
+      if(!map.hasLayer(cg)||!(cg instanceof L.MarkerClusterGroup))return;
       const layer=state.layers.find(l=>l.id===lid);
       if(!layer)return;
+      let lg=unclustered[lid];
+      if(!lg){lg=unclustered[lid]=L.layerGroup().addTo(map);}
 
-      // Collect naps in view
-      const inView=layer.naps.filter(n=>bounds.contains([n.lat,n.lng]));
-      if(!inView.length)return;
+      const toReturn=lg.getLayers().filter(m=>!bounds.contains(m.getLatLng()));
+      toReturn.forEach(m=>lg.removeLayer(m));
+      if(toReturn.length)cg.addLayers(toReturn);
 
-      // Remove their markers from the cluster group temporarily
-      const lg=L.layerGroup().addTo(map);
-      unclustered[lid]=lg;
-
-      inView.forEach(n=>{
-        const existing=mMap[n.id];
-        if(existing){
-          cg.removeLayer(existing);
-          lg.addLayer(existing);
-        }
+      const toPull=[];
+      layer.naps.forEach(n=>{
+        const m=mMap[n.id];
+        if(m&&!lg.hasLayer(m)&&bounds.contains([n.lat,n.lng]))toPull.push(m);
       });
+      if(toPull.length){cg.removeLayers(toPull);toPull.forEach(m=>lg.addLayer(m));}
     });
+  }
 
+  function expandAll(){
     expanded=true;
+    syncExpanded();
     btn.classList.add('active');
     btn.innerHTML='<i class="ti ti-arrows-minimize"></i> Collapse clusters';
   }
 
-  function collapseAll(){
+  // keepMode: put markers back (e.g. before a re-render) but stay in expanded mode
+  function collapseAll(keepMode){
     Object.entries(unclustered).forEach(([lid,lg])=>{
       const cg=clusterGroups[lid];
-      if(!cg){lg.clearLayers();map.removeLayer(lg);return;}
-      // Move markers back into their cluster group
-      lg.getLayers().forEach(m=>{
-        lg.removeLayer(m);
-        cg.addLayer(m);
-      });
+      const ms=lg.getLayers();
+      lg.clearLayers();
+      if(cg&&ms.length){if(cg.addLayers)cg.addLayers(ms);else ms.forEach(m=>cg.addLayer(m));}
       map.removeLayer(lg);
       delete unclustered[lid];
     });
+    if(keepMode===true)return;
 
     expanded=false;
     btn.classList.remove('active');
@@ -1774,13 +1783,14 @@ function openImport(lid){
     if(expanded)collapseAll();else expandAll();
   });
 
-  // Auto-collapse on zoom/pan so stale expansions don't linger
-  map.on('zoomstart movestart',function(){
-    if(expanded)collapseAll();
+  // Stay expanded while panning/zooming — just follow the new viewport
+  map.on('moveend',function(){
+    if(expanded)syncExpanded();
   });
 
-  // Expose collapse so renderMarkers can call it on re-render
-  window._collapseExpandedClusters=collapseAll;
+  // renderMarkers suspends the expansion before re-rendering and restores it after
+  window._collapseExpandedClusters=function(){collapseAll(true);};
+  window._reexpandClusters=function(){if(expanded)syncExpanded();};
 })();
 
 // ── Show / hide NAP labels ───────────────────────────────────────────────────
