@@ -1,0 +1,2034 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>NAP Planner — Cordillera</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:13px;color:#1a1a1a;background:#f5f5f5;height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+#topbar{height:46px;display:flex;align-items:center;gap:8px;padding:0 14px;background:#fff;border-bottom:1px solid #e5e5e5;flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+.logo{display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px;color:#111;}
+.logo i{font-size:18px;color:#2563eb;}
+.logo-badge{background:#2563eb;color:#fff;font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;letter-spacing:.3px;}
+.spacer{flex:1;}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:0 11px;height:31px;border:1px solid #d1d5db;border-radius:7px;background:#fff;color:#374151;cursor:pointer;font-size:12px;font-family:inherit;white-space:nowrap;transition:background .12s,border-color .12s;}
+.btn:hover{background:#f9fafb;border-color:#9ca3af;}
+.btn i{font-size:15px;}
+.btn.primary{background:#2563eb;color:#fff;border-color:#2563eb;}
+.btn.primary:hover{background:#1d4ed8;border-color:#1d4ed8;}
+.btn.danger{color:#dc2626;border-color:#fca5a5;}
+.btn.danger:hover{background:#fef2f2;}
+.btn.sm{height:26px;padding:0 8px;font-size:11px;}
+.btn.sm i{font-size:13px;}
+#body{display:flex;flex:1;overflow:hidden;}
+#sidebar{width:280px;flex-shrink:0;display:flex;flex-direction:column;background:#fff;border-right:1px solid #e5e5e5;overflow:hidden;}
+#map-area{flex:1;position:relative;}
+#map{width:100%;height:100%;}
+#statusbar{height:26px;display:flex;align-items:center;padding:0 14px;gap:10px;background:#f9fafb;border-top:1px solid #e5e5e5;font-size:11px;color:#6b7280;flex-shrink:0;}
+#statusbar b{color:#111;font-weight:600;}
+#sb-sep{flex:1;}
+#sb-coords{font-family:'SF Mono',monospace;font-size:11px;}
+
+/* Search */
+#search-sec{padding:10px;border-bottom:1px solid #e5e5e5;flex-shrink:0;}
+.sec-label{font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;}
+.search-wrap{position:relative;display:flex;align-items:center;}
+.search-wrap i.si{position:absolute;left:8px;font-size:15px;color:#9ca3af;pointer-events:none;}
+#brgy-input{width:100%;padding:7px 28px 7px 28px;font-size:12px;border:1px solid #d1d5db;border-radius:8px;background:#fff;color:#111;font-family:inherit;outline:none;}
+#brgy-input:focus{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.1);}
+#clr-btn{position:absolute;right:7px;font-size:15px;color:#9ca3af;cursor:pointer;background:none;border:none;display:none;line-height:1;}
+#brgy-dd{margin-top:5px;max-height:160px;overflow-y:auto;border:1px solid #e5e5e5;border-radius:8px;background:#fff;display:none;box-shadow:0 4px 12px rgba(0,0,0,.08);}
+.bi{padding:8px 10px;cursor:pointer;border-bottom:1px solid #f3f4f6;}
+.bi:last-child{border-bottom:none;}
+.bi:hover{background:#f0f7ff;}
+.bi-name{font-weight:600;font-size:12px;color:#111;}
+.bi-loc{font-size:11px;color:#6b7280;margin-top:1px;}
+#brgy-tag{display:none;margin-top:6px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:7px;padding:5px 8px;font-size:11px;color:#1d4ed8;align-items:center;justify-content:space-between;}
+
+/* NAP search */
+#nap-search-sec{padding:10px;border-bottom:1px solid #e5e5e5;flex-shrink:0;}
+#nap-input{width:100%;padding:7px 28px 7px 28px;font-size:12px;border:1px solid #d1d5db;border-radius:8px;background:#fff;color:#111;font-family:inherit;outline:none;}
+#nap-input:focus{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.1);}
+#nap-clr-btn{position:absolute;right:7px;font-size:15px;color:#9ca3af;cursor:pointer;background:none;border:none;display:none;line-height:1;}
+#nap-dd{margin-top:5px;max-height:200px;overflow-y:auto;border:1px solid #e5e5e5;border-radius:8px;background:#fff;display:none;box-shadow:0 4px 12px rgba(0,0,0,.08);}
+.ni{padding:8px 10px;cursor:pointer;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;gap:8px;}
+.ni:last-child{border-bottom:none;}
+.ni:hover{background:#f0f7ff;}
+.ni-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.ni-info{flex:1;min-width:0;}
+.ni-name{font-weight:600;font-size:12px;color:#111;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ni-sub{font-size:10px;color:#6b7280;margin-top:1px;}
+.ni-empty{padding:10px;font-size:11px;color:#9ca3af;text-align:center;}
+
+/* Layers */
+#layers-sec{display:flex;flex-direction:column;flex:1;overflow:hidden;}
+#layers-head{display:flex;align-items:center;padding:8px 10px 6px;gap:6px;border-bottom:1px solid #e5e5e5;flex-shrink:0;}
+.layers-title{font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.6px;flex:1;}
+#layer-list{flex:1;overflow-y:auto;padding:6px;}
+
+/* Layer card */
+.lc{border:1px solid #e5e5e5;border-radius:9px;margin-bottom:6px;overflow:hidden;background:#fff;transition:border-color .15s,box-shadow .15s;}
+.lc.active{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.1);}
+.lc-head{display:flex;align-items:center;gap:7px;padding:8px 9px;cursor:pointer;}
+.lc-head:hover{background:#f9fafb;}
+.lc-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.lc-name{flex:1;font-weight:600;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#111;}
+.lc-count{font-size:11px;color:#6b7280;background:#f3f4f6;padding:1px 6px;border-radius:20px;white-space:nowrap;}
+.lc-eye{display:flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;cursor:pointer;color:#9ca3af;flex-shrink:0;}
+.lc-eye:hover{background:#f3f4f6;color:#374151;}
+.lc-actions{display:flex;border-top:1px solid #f3f4f6;}
+.lc-actions button{flex:1;padding:5px 0;border:none;background:none;cursor:pointer;color:#6b7280;font-family:inherit;display:flex;align-items:center;justify-content:center;border-right:1px solid #f3f4f6;transition:background .1s,color .1s;}
+.lc-actions button:last-child{border-right:none;}
+.lc-actions button:hover{background:#f9fafb;color:#111;}
+.lc-actions button i{font-size:14px;}
+.lc-actions button.del:hover{background:#fef2f2;color:#dc2626;}
+
+/* Points list inside layer */
+.pts-list{border-top:1px solid #f3f4f6;background:#fafafa;max-height:200px;overflow-y:auto;}
+.pt-row{display:flex;align-items:center;gap:6px;padding:5px 8px 5px 10px;border-bottom:1px solid #f3f4f6;cursor:pointer;}
+.pt-row:last-child{border-bottom:none;}
+.pt-row:hover{background:#f0f7ff;}
+.pt-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.pt-info{flex:1;min-width:0;}
+.pt-name{font-size:11px;font-weight:600;color:#111;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.pt-coord{font-size:10px;color:#9ca3af;font-family:'SF Mono',monospace;}
+.pt-del{display:flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:5px;cursor:pointer;color:#9ca3af;border:none;background:none;flex-shrink:0;}
+.pt-del:hover{background:#fef2f2;color:#dc2626;}
+
+/* Layer collapse toggle */
+.lc-collapse{display:flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:5px;cursor:pointer;color:#9ca3af;flex-shrink:0;transition:transform .15s;}
+.lc-collapse:hover{background:#f3f4f6;color:#374151;}
+.lc-collapse.open{transform:rotate(90deg);}
+.lc-body{transition:none;}
+.lc-body.collapsed{display:none;}
+
+/* Drag handle for reordering */
+.lc-drag{display:flex;align-items:center;justify-content:center;width:18px;height:24px;cursor:grab;color:#d1d5db;flex-shrink:0;}
+.lc-drag:active{cursor:grabbing;}
+.lc-drag:hover{color:#9ca3af;}
+.lc.dragging{opacity:.4;}
+.lc.drag-over{border-color:#2563eb;border-style:dashed;}
+
+/* Basemap */
+#bm-sec{padding:8px 10px;border-top:1px solid #e5e5e5;flex-shrink:0;}
+#bm-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:6px;}
+.bm-btn{padding:5px 0;font-size:11px;border:1px solid #e5e5e5;border-radius:6px;background:#fff;color:#6b7280;cursor:pointer;text-align:center;font-family:inherit;transition:all .1s;}
+.bm-btn:hover{background:#f9fafb;}
+.bm-btn.on{border-color:#2563eb;color:#2563eb;font-weight:600;background:#eff6ff;}
+
+/* Modal panel */
+#panel{position:absolute;top:10px;right:10px;width:240px;background:#fff;border:1px solid #e5e5e5;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:1000;display:none;overflow:hidden;}
+#panel-hdr{display:flex;align-items:center;padding:11px 13px;border-bottom:1px solid #f3f4f6;gap:8px;}
+#panel-title{font-size:13px;font-weight:600;flex:1;color:#111;}
+#panel-close{background:none;border:none;cursor:pointer;color:#9ca3af;display:flex;padding:2px;border-radius:5px;}
+#panel-close:hover{background:#f3f4f6;color:#374151;}
+#panel-close i{font-size:16px;}
+#panel-body{padding:13px;}
+.f-row{margin-bottom:10px;}
+.f-label{font-size:11px;font-weight:600;color:#374151;margin-bottom:4px;display:block;}
+.f-input{width:100%;padding:7px 9px;font-size:12px;border:1px solid #d1d5db;border-radius:7px;background:#fff;color:#111;font-family:inherit;outline:none;}
+.f-input:focus{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.1);}
+#panel-foot{display:flex;gap:6px;padding:0 13px 13px;}
+#panel-foot button{flex:1;}
+.imp-toggle{font-size:11px;color:#2563eb;cursor:pointer;text-align:center;margin-top:4px;padding:3px 0;}
+.imp-toggle:hover{text-decoration:underline;}
+#csv-block{display:none;margin-top:8px;}
+.csv-hint{font-size:10px;color:#9ca3af;margin-bottom:4px;}
+#csv-area{width:100%;height:72px;font-size:11px;font-family:'SF Mono',monospace;resize:none;padding:6px 8px;border:1px solid #d1d5db;border-radius:7px;background:#f9fafb;color:#111;outline:none;}
+#csv-area:focus{border-color:#2563eb;background:#fff;}
+
+/* Toast */
+#toast{position:absolute;bottom:36px;left:50%;transform:translateX(-50%);background:#1f2937;color:#fff;font-size:12px;padding:8px 16px;border-radius:20px;z-index:3000;opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap;}
+#toast.show{opacity:1;}
+
+/* Cluster styling */
+.marker-cluster-small,.marker-cluster-medium,.marker-cluster-large{background-clip:padding-box;border-radius:50%;}
+.marker-cluster-small{background:rgba(37,99,235,.25);}
+.marker-cluster-small div{background:rgba(37,99,235,.7);color:#fff;font-weight:700;font-size:11px;}
+.marker-cluster-medium{background:rgba(234,88,12,.25);}
+.marker-cluster-medium div{background:rgba(234,88,12,.7);color:#fff;font-weight:700;font-size:11px;}
+.marker-cluster-large{background:rgba(124,58,237,.25);}
+.marker-cluster-large div{background:rgba(124,58,237,.7);color:#fff;font-weight:700;font-size:11px;}
+.marker-cluster div{width:30px;height:30px;margin-left:5px;margin-top:5px;text-align:center;border-radius:15px;line-height:30px;}
+.marker-cluster{width:40px;height:40px;}
+
+/* Virtual scroll for points list */
+.pts-list-wrap{border-top:1px solid #f3f4f6;background:#fafafa;}
+.pts-virtual{overflow-y:auto;max-height:200px;position:relative;}
+.pts-spacer{position:absolute;top:0;left:0;width:1px;pointer-events:none;}
+.pts-visible{position:absolute;top:0;left:0;width:100%;}
+.pts-count-label{font-size:10px;color:#9ca3af;padding:4px 10px;border-bottom:1px solid #f3f4f6;font-style:italic;}
+
+/* Goto bar */
+#goto-bar{display:flex;align-items:center;gap:6px;position:absolute;top:10px;left:10px;z-index:900;background:#fff;border:1px solid #e5e5e5;border-radius:10px;box-shadow:0 4px 14px rgba(0,0,0,.1);padding:6px 8px;width:300px;flex-wrap:wrap;}
+#goto-bar.expanded{border-radius:10px 10px 0 0;}
+#goto-loc-wrap{position:relative;display:flex;align-items:center;flex:1;min-width:0;}
+#goto-loc-wrap .si2{position:absolute;left:8px;font-size:14px;color:#9ca3af;pointer-events:none;z-index:1;}
+#goto-loc-input{flex:1;padding:5px 8px 5px 28px;font-size:12px;border:1px solid #d1d5db;border-radius:7px;background:#f9fafb;color:#111;font-family:inherit;outline:none;min-width:0;width:100%;}
+#goto-loc-input:focus{border-color:#2563eb;background:#fff;box-shadow:0 0 0 3px rgba(37,99,235,.1);}
+#goto-coord-toggle{flex-shrink:0;font-size:11px;color:#2563eb;cursor:pointer;white-space:nowrap;padding:4px 6px;border-radius:6px;}
+#goto-coord-toggle:hover{background:#eff6ff;}
+#goto-coord-row{display:none;align-items:center;gap:5px;width:100%;margin-top:4px;}
+#goto-coord-row.show{display:flex;}
+#goto-lat,#goto-lng{flex:1;padding:5px 7px;font-size:12px;border:1px solid #d1d5db;border-radius:7px;background:#f9fafb;color:#111;font-family:'SF Mono',monospace;outline:none;min-width:0;}
+#goto-lat:focus,#goto-lng:focus{border-color:#2563eb;background:#fff;box-shadow:0 0 0 3px rgba(37,99,235,.1);}
+#goto-go{padding:5px 10px;font-size:12px;height:28px;}
+#goto-dd{position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #e5e5e5;border-top:none;border-radius:0 0 10px 10px;max-height:200px;overflow-y:auto;box-shadow:0 6px 14px rgba(0,0,0,.1);display:none;z-index:901;}
+#goto-dd.show{display:block;}
+.gi{padding:9px 12px;cursor:pointer;border-bottom:1px solid #f3f4f6;display:flex;align-items:flex-start;gap:8px;}
+.gi:last-child{border-bottom:none;}
+.gi:hover{background:#f0f7ff;}
+.gi i{font-size:15px;color:#9ca3af;margin-top:1px;flex-shrink:0;}
+.gi-text{flex:1;min-width:0;}
+.gi-name{font-size:12px;font-weight:600;color:#111;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.gi-addr{font-size:10px;color:#6b7280;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.gi-empty{padding:10px 12px;font-size:11px;color:#9ca3af;text-align:center;}
+#goto-pin{display:none;}
+
+/* Map overlay buttons — stacked bottom-right above zoom controls */
+#map-btns{position:absolute;bottom:90px;right:10px;z-index:900;display:flex;flex-direction:column;gap:6px;align-items:flex-end;}
+.map-overlay-btn{display:inline-flex;align-items:center;gap:6px;padding:0 12px;height:32px;background:#fff;border:1px solid #d1d5db;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.12);cursor:pointer;font-size:12px;font-family:inherit;color:#374151;white-space:nowrap;transition:background .12s,border-color .12s,color .12s;}
+.map-overlay-btn:hover{background:#f9fafb;border-color:#9ca3af;}
+.map-overlay-btn.active{background:#2563eb;border-color:#2563eb;color:#fff;}
+.map-overlay-btn.active:hover{background:#1d4ed8;}
+.map-overlay-btn i{font-size:14px;}
+
+/* NAP labels on map */
+.nap-label{background:transparent;border:none;box-shadow:none;}
+.nap-label-inner{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:600;color:#111;background:rgba(255,255,255,.88);border:1px solid rgba(0,0,0,.12);border-radius:4px;padding:1px 5px;white-space:nowrap;pointer-events:none;margin-top:2px;}
+.nap-label-text{max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+/* Custom leaflet popup */
+.leaflet-popup-content-wrapper{border-radius:10px!important;box-shadow:0 8px 20px rgba(0,0,0,.15)!important;border:1px solid #e5e5e5!important;padding:0!important;}
+.leaflet-popup-content{margin:0!important;min-width:160px;}
+.nap-popup{padding:11px 13px;}
+.nap-popup-name{font-weight:700;font-size:13px;color:#111;margin-bottom:2px;}
+.nap-popup-coord{font-size:10px;color:#9ca3af;font-family:'SF Mono',monospace;margin-bottom:8px;}
+.nap-popup-notes{font-size:11px;color:#374151;margin-bottom:8px;}
+.nap-popup-actions{display:flex;gap:6px;}
+.nap-popup-actions button{flex:1;padding:5px 0;font-size:11px;border:1px solid #e5e5e5;border-radius:6px;background:#fff;cursor:pointer;font-family:inherit;color:#374151;}
+.nap-popup-actions button:hover{background:#f9fafb;}
+.nap-popup-actions button.del:hover{background:#fef2f2;color:#dc2626;border-color:#fca5a5;}
+
+/* Utilization modal */
+#util-panel{position:absolute;top:10px;right:10px;width:300px;background:#fff;border:1px solid #e5e5e5;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:1001;display:none;overflow:hidden;}
+#util-panel-hdr{display:flex;align-items:center;padding:11px 13px;border-bottom:1px solid #f3f4f6;gap:8px;}
+#util-panel-title{font-size:13px;font-weight:600;flex:1;color:#111;}
+#util-panel-close{background:none;border:none;cursor:pointer;color:#9ca3af;display:flex;padding:2px;border-radius:5px;}
+#util-panel-close:hover{background:#f3f4f6;color:#374151;}
+#util-panel-body{padding:13px;}
+.util-hint{font-size:11px;color:#6b7280;margin-bottom:8px;line-height:1.5;}
+.util-hint code{background:#f3f4f6;border-radius:3px;padding:1px 4px;font-family:'SF Mono',monospace;font-size:10px;}
+#util-csv-area{width:100%;height:100px;font-size:11px;font-family:'SF Mono',monospace;resize:vertical;padding:6px 8px;border:1px solid #d1d5db;border-radius:7px;background:#f9fafb;color:#111;outline:none;}
+#util-csv-area:focus{border-color:#2563eb;background:#fff;}
+.util-file-row{display:flex;align-items:center;gap:8px;margin-top:6px;}
+.util-or{font-size:11px;color:#9ca3af;}
+#util-panel-foot{display:flex;gap:6px;padding:0 13px 13px;}
+#util-panel-foot button{flex:1;}
+
+/* Utilization legend */
+#util-legend{position:absolute;top:10px;right:260px;z-index:900;background:#fff;border:1px solid #e5e5e5;border-radius:9px;box-shadow:0 2px 8px rgba(0,0,0,.12);padding:8px 10px;display:none;min-width:160px;}
+.util-legend-title{font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;}
+.util-legend-bar{height:10px;border-radius:5px;width:100%;margin-bottom:5px;}
+.util-legend-labels{display:flex;justify-content:space-between;font-size:10px;color:#6b7280;font-family:'SF Mono',monospace;}
+
+/* Utilization badge on popup */
+.nap-util-bar-wrap{margin-bottom:8px;}
+.nap-util-label{font-size:10px;font-weight:600;color:#6b7280;margin-bottom:3px;display:flex;justify-content:space-between;}
+.nap-util-bar-bg{height:6px;background:#f3f4f6;border-radius:3px;overflow:hidden;}
+.nap-util-bar-fill{height:100%;border-radius:3px;transition:width .3s;}
+
+/* Utilization % in NAP label badge */
+.nap-label-util{font-size:9px;font-weight:700;padding:0 3px;border-radius:3px;margin-left:3px;vertical-align:middle;}
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <div class="logo">
+    <i class="ti ti-map-pin"></i>
+    NAP Planner
+    <span class="logo-badge">Cordillera</span>
+  </div>
+  <div class="spacer"></div>
+  <button class="btn" id="btn-exp"><i class="ti ti-download"></i> Export all</button>
+  <button class="btn" id="btn-imp-csv"><i class="ti ti-file-upload"></i> Import CSV</button>
+  <button class="btn" id="btn-util-update"><i class="ti ti-chart-bar"></i> Update Utilization</button>
+  <input type="file" id="csv-file-input" accept=".csv" style="display:none"/>
+  <button class="btn primary" id="btn-add-layer"><i class="ti ti-layers-intersect"></i> New layer</button>
+</div>
+
+<div id="body">
+  <div id="sidebar">
+    <div id="search-sec">
+      <div class="sec-label">Search barangay</div>
+      <div class="search-wrap">
+        <i class="ti ti-search si"></i>
+        <input id="brgy-input" type="text" placeholder="Barangay or municipality…" autocomplete="off"/>
+        <button id="clr-btn"><i class="ti ti-x"></i></button>
+      </div>
+      <div id="brgy-dd"></div>
+      <div id="brgy-tag">
+        <span id="brgy-tag-name"></span>
+        <button class="btn sm" id="brgy-clr-tag" style="border:none;background:none;color:#2563eb;padding:0;height:auto;font-size:11px;">Clear</button>
+      </div>
+    </div>
+
+    <div id="nap-search-sec">
+      <div class="sec-label">Search NAP label</div>
+      <div class="search-wrap">
+        <i class="ti ti-search si"></i>
+        <input id="nap-input" type="text" placeholder="Label or notes…" autocomplete="off"/>
+        <button id="nap-clr-btn"><i class="ti ti-x"></i></button>
+      </div>
+      <div id="nap-dd"></div>
+    </div>
+
+    <div id="layers-sec">
+      <div id="layers-head">
+        <span class="layers-title">Layers</span>
+        <button class="btn sm" id="btn-expand-all" title="Expand all layers" style="padding:0 7px;"><i class="ti ti-chevrons-down" style="font-size:13px;"></i></button>
+        <button class="btn sm" id="btn-collapse-all" title="Collapse all layers" style="padding:0 7px;"><i class="ti ti-chevrons-up" style="font-size:13px;"></i></button>
+        <button class="btn sm" id="btn-add-layer2"><i class="ti ti-plus"></i></button>
+      </div>
+      <div id="layer-list"></div>
+    </div>
+
+    <div id="bm-sec">
+      <div class="sec-label">Base map</div>
+      <div id="bm-grid">
+        <button class="bm-btn on" data-bm="street">Street</button>
+        <button class="bm-btn" data-bm="satellite">Satellite</button>
+        <button class="bm-btn" data-bm="topo">Topo</button>
+        <button class="bm-btn" data-bm="dark">Dark</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="map-area">
+    <div id="map"></div>
+    <div id="toast"></div>
+
+    <!-- Go to location / coords bar -->
+    <div id="goto-bar">
+      <div id="goto-loc-wrap">
+        <i class="ti ti-map-search si2"></i>
+        <input id="goto-loc-input" type="text" placeholder="Search location…" autocomplete="off"/>
+      </div>
+      <span id="goto-coord-toggle" title="Go to coordinates"><i class="ti ti-crosshair"></i> Coords</span>
+      <div id="goto-coord-row">
+        <input id="goto-lat" type="text" placeholder="Lat e.g. 16.4023"/>
+        <input id="goto-lng" type="text" placeholder="Lng e.g. 120.596"/>
+        <button class="btn primary sm" id="goto-go"><i class="ti ti-arrow-right" style="font-size:13px;"></i></button>
+      </div>
+      <div id="goto-dd"></div>
+    </div>
+
+    <div id="panel">
+      <div id="panel-hdr">
+        <span id="panel-title">Add NAP</span>
+        <button id="panel-close"><i class="ti ti-x"></i></button>
+      </div>
+      <div id="panel-body">
+        <div class="f-row">
+          <label class="f-label">Label</label>
+          <input class="f-input" id="m-label" type="text" placeholder="e.g. NAP-001"/>
+        </div>
+        <div class="f-row" style="margin-bottom:4px;">
+          <label class="f-label">Notes</label>
+          <input class="f-input" id="m-notes" type="text" placeholder="Optional notes"/>
+        </div>
+        <div class="imp-toggle" id="imp-toggle">or import CSV rows</div>
+        <div id="csv-block">
+          <div class="csv-hint">lat,lng,label,notes (one per line)</div>
+          <textarea id="csv-area" placeholder="16.4023,120.5960,NAP-001,near pole&#10;16.4031,120.5975,NAP-002,"></textarea>
+        </div>
+      </div>
+      <div id="panel-foot">
+        <button class="btn primary" id="panel-save">Save</button>
+        <button class="btn" id="panel-cancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Map overlay buttons -->
+  <div id="map-btns">
+    <button id="btn-show-labels" class="map-overlay-btn" title="Toggle NAP labels">
+      <i class="ti ti-tag"></i> Show labels
+    </button>
+    <button id="btn-expand-clusters" class="map-overlay-btn" title="Expand all visible clusters">
+      <i class="ti ti-arrow-autofit-content"></i> Expand clusters
+    </button>
+    <button id="btn-util-toggle" class="map-overlay-btn" title="Toggle utilization view">
+      <i class="ti ti-chart-pie"></i> Show Utilization
+    </button>
+  </div>
+
+  <!-- Utilization update panel -->
+  <div id="util-panel">
+    <div id="util-panel-hdr">
+      <i class="ti ti-chart-bar" style="font-size:16px;color:#2563eb;"></i>
+      <span id="util-panel-title">Update Utilization</span>
+      <button id="util-panel-close"><i class="ti ti-x" style="font-size:16px;"></i></button>
+    </div>
+    <div id="util-panel-body">
+      <div class="util-hint">Paste CSV with two columns: <code>label,utilization</code><br>Values are percentages (0–100). Header row is optional. Existing entries not in this CSV are preserved.</div>
+      <textarea id="util-csv-area" placeholder="NAP-001,72&#10;NAP-002,45&#10;NAP-003,98"></textarea>
+      <div class="util-file-row">
+        <span class="util-or">or</span>
+        <button class="btn sm" id="btn-util-file"><i class="ti ti-upload" style="font-size:13px;"></i> Upload CSV file</button>
+        <input type="file" id="util-file-input" accept=".csv" style="display:none"/>
+      </div>
+    </div>
+    <div id="util-panel-foot">
+      <button class="btn primary" id="util-save"><i class="ti ti-check" style="font-size:13px;"></i> Apply</button>
+      <button class="btn" id="util-cancel">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Utilization legend -->
+  <div id="util-legend">
+    <div class="util-legend-title">Utilization</div>
+    <div class="util-legend-bar" id="util-legend-bar"></div>
+    <div class="util-legend-labels"><span>0%</span><span>50%</span><span>100%</span></div>
+  </div>
+</div>
+
+<div id="statusbar">
+  <i class="ti ti-circle-dot" style="font-size:13px;color:#16a34a;"></i>
+  Active: <b id="sb-active">—</b>
+  <span id="sb-sep"></span>
+  NAPs: <b id="sb-total">0</b> &nbsp;|&nbsp; Layers: <b id="sb-layers">0</b>
+  &nbsp;|&nbsp; <span id="sb-coords">hover map for coords</span>
+</div>
+
+<script>
+const SKEY='nap_v4';
+const UKEY='nap_util_v1'; // separate key for utilization data
+const COLORS=['#2563eb','#16a34a','#ea580c','#7c3aed','#d97706','#db2777','#0891b2','#64748b','#854d0e','#065f46'];
+
+const BARANGAYS=[
+  // Baguio City — 129 barangays
+  ['Abanao-Zandueta-Kayong-Chugum-Otek','Baguio City','Baguio'],
+  ['Alfonso Tabora','Baguio City','Baguio'],
+  ['Ambiong','Baguio City','Baguio'],
+  ['Andres Bonifacio','Baguio City','Baguio'],
+  ['Apugan-Loakan','Baguio City','Baguio'],
+  ['Asin Road','Baguio City','Baguio'],
+  ['Atok Trail','Baguio City','Baguio'],
+  ['Aurora Hill North Central','Baguio City','Baguio'],
+  ['Aurora Hill Proper','Baguio City','Baguio'],
+  ['Aurora Hill South Central','Baguio City','Baguio'],
+  ['Bagong Lipunan ng Crame','Baguio City','Baguio'],
+  ['Bakakeng Central','Baguio City','Baguio'],
+  ['Bakakeng Norte','Baguio City','Baguio'],
+  ['Bal-Marcoville','Baguio City','Baguio'],
+  ['Balsigan','Baguio City','Baguio'],
+  ['Bayan Park East','Baguio City','Baguio'],
+  ['Bayan Park Village','Baguio City','Baguio'],
+  ['Bayan Park West','Baguio City','Baguio'],
+  ['BGH Compound','Baguio City','Baguio'],
+  ['Bonifacio-Caguioa-Rimando','Baguio City','Baguio'],
+  ['Brookside','Baguio City','Baguio'],
+  ['Brookspoint','Baguio City','Baguio'],
+  ['Cabinet Hill-Teachers Camp','Baguio City','Baguio'],
+  ['Camdas Subdivision','Baguio City','Baguio'],
+  ['Camp 7','Baguio City','Baguio'],
+  ['Camp 8','Baguio City','Baguio'],
+  ['Camp Allen','Baguio City','Baguio'],
+  ['Campo Filipino','Baguio City','Baguio'],
+  ['City Camp Central','Baguio City','Baguio'],
+  ['City Camp Proper','Baguio City','Baguio'],
+  ['Country Club Village','Baguio City','Baguio'],
+  ['Cresencia Village','Baguio City','Baguio'],
+  ['Dagsian Lower','Baguio City','Baguio'],
+  ['Dagsian Upper','Baguio City','Baguio'],
+  ['DPS Area','Baguio City','Baguio'],
+  ['Dizon Subdivision','Baguio City','Baguio'],
+  ['Dominican Hill-Mirador','Baguio City','Baguio'],
+  ['Dontogan','Baguio City','Baguio'],
+  ['Engineers Hill','Baguio City','Baguio'],
+  ['Fairview Village','Baguio City','Baguio'],
+  ['Ferdinand','Baguio City','Baguio'],
+  ['Fort del Pilar','Baguio City','Baguio'],
+  ['Gabriela Silang','Baguio City','Baguio'],
+  ['General Emilio F. Aguinaldo','Baguio City','Baguio'],
+  ['General Luna Lower','Baguio City','Baguio'],
+  ['General Luna Upper','Baguio City','Baguio'],
+  ['Gibraltar','Baguio City','Baguio'],
+  ['Greenwater Village','Baguio City','Baguio'],
+  ['Guisad Central','Baguio City','Baguio'],
+  ['Guisad Sorong','Baguio City','Baguio'],
+  ['Happy Hollow','Baguio City','Baguio'],
+  ['Happy Homes','Baguio City','Baguio'],
+  ['Harrison-Claudio Carantes','Baguio City','Baguio'],
+  ['Hillside','Baguio City','Baguio'],
+  ['Holy Ghost Extension','Baguio City','Baguio'],
+  ['Holy Ghost Proper','Baguio City','Baguio'],
+  ['Honeymoon','Baguio City','Baguio'],
+  ['Imelda R. Marcos','Baguio City','Baguio'],
+  ['Imelda Village','Baguio City','Baguio'],
+  ['Irisan','Baguio City','Baguio'],
+  ['Kabayanihan','Baguio City','Baguio'],
+  ['Kagitingan','Baguio City','Baguio'],
+  ['Kayang Extension','Baguio City','Baguio'],
+  ['Kayang-Hilltop','Baguio City','Baguio'],
+  ['Kias','Baguio City','Baguio'],
+  ['Legarda-Burnham-Kisad','Baguio City','Baguio'],
+  ['Liwanag-Loakan','Baguio City','Baguio'],
+  ['Loakan Proper','Baguio City','Baguio'],
+  ['Lopez Jaena','Baguio City','Baguio'],
+  ['Lourdes Subdivision Extension','Baguio City','Baguio'],
+  ['Lourdes Subdivision Lower','Baguio City','Baguio'],
+  ['Lourdes Subdivision Proper','Baguio City','Baguio'],
+  ['Lualhati','Baguio City','Baguio'],
+  ['Lucnab','Baguio City','Baguio'],
+  ['Magsaysay Lower','Baguio City','Baguio'],
+  ['Magsaysay Private Road','Baguio City','Baguio'],
+  ['Magsaysay Upper','Baguio City','Baguio'],
+  ['Malcolm Square-Perfecto','Baguio City','Baguio'],
+  ['Manuel A. Roxas','Baguio City','Baguio'],
+  ['Market Subdivision Upper','Baguio City','Baguio'],
+  ['Middle Quezon Hill Subdivision','Baguio City','Baguio'],
+  ['Military Cut-Off','Baguio City','Baguio'],
+  ['Mines View Park','Baguio City','Baguio'],
+  ['Modern Site East','Baguio City','Baguio'],
+  ['Modern Site West','Baguio City','Baguio'],
+  ['MRR-Queen of Peace','Baguio City','Baguio'],
+  ['Naguilian Road','Baguio City','Baguio'],
+  ['New Lucban','Baguio City','Baguio'],
+  ['Outlook Drive','Baguio City','Baguio'],
+  ['Pacdal','Baguio City','Baguio'],
+  ['Padre Burgos','Baguio City','Baguio'],
+  ['Padre Zamora','Baguio City','Baguio'],
+  ['Palma-Urbano','Baguio City','Baguio'],
+  ['Phil-Am','Baguio City','Baguio'],
+  ['Pinget','Baguio City','Baguio'],
+  ['Pinsao Pilot Project','Baguio City','Baguio'],
+  ['Pinsao Proper','Baguio City','Baguio'],
+  ['Pucsusan','Baguio City','Baguio'],
+  ['Puliwes','Baguio City','Baguio'],
+  ['Quezon Hill Proper','Baguio City','Baguio'],
+  ['Quezon Hill Upper','Baguio City','Baguio'],
+  ['Quirino Hill East','Baguio City','Baguio'],
+  ['Quirino Hill Lower','Baguio City','Baguio'],
+  ['Quirino Hill Middle','Baguio City','Baguio'],
+  ['Quirino Hill West','Baguio City','Baguio'],
+  ['Quirino-Magsaysay','Baguio City','Baguio'],
+  ['Rizal Monument Area','Baguio City','Baguio'],
+  ['Rockcrushers Hill','Baguio City','Baguio'],
+  ['Roosevelt','Baguio City','Baguio'],
+  ['Rosario','Baguio City','Baguio'],
+  ['Saint Joseph Village','Baguio City','Baguio'],
+  ['Salud Mitra','Baguio City','Baguio'],
+  ['San Antonio Village','Baguio City','Baguio'],
+  ['San Luis Village','Baguio City','Baguio'],
+  ['San Roque Village','Baguio City','Baguio'],
+  ['San Vicente','Baguio City','Baguio'],
+  ['Sanitary Camp Lower','Baguio City','Baguio'],
+  ['Sanitary Camp Upper','Baguio City','Baguio'],
+  ['Santa Escolastica','Baguio City','Baguio'],
+  ['Santo Rosario-Yangco','Baguio City','Baguio'],
+  ['Santo Tomas Proper','Baguio City','Baguio'],
+  ['Scout Barrio','Baguio City','Baguio'],
+  ['Session Road Area','Baguio City','Baguio'],
+  ['Slaughter House Area','Baguio City','Baguio'],
+  ['SLU-SVP Housing Village','Baguio City','Baguio'],
+  ['South Drive','Baguio City','Baguio'],
+  ['Teodora Alonzo','Baguio City','Baguio'],
+  ['Trancoville','Baguio City','Baguio'],
+  ['Upper Dagsian','Baguio City','Baguio'],
+  ['Upper General Roxas','Baguio City','Baguio'],
+  ['Upper Magsaysay','Baguio City','Baguio'],
+  ['Upper Market Subdivision','Baguio City','Baguio'],
+  ['Upper Quirino Hill','Baguio City','Baguio'],
+  ['Upper Rock Quarry','Baguio City','Baguio'],
+  ['Upper Session Road','Baguio City','Baguio'],
+  ['Upper Tuba Road','Baguio City','Baguio'],
+  ['Urdaneta Village','Baguio City','Baguio'],
+  ['Valencia Hill','Baguio City','Baguio'],
+  ['Victoria Village','Baguio City','Baguio'],
+  // Benguet — Atok (8)
+  ['Abiang','Atok','Benguet'],['Caliking','Atok','Benguet'],['Cattubo','Atok','Benguet'],
+  ['Naguey','Atok','Benguet'],['Paoay','Atok','Benguet'],['Pasdong','Atok','Benguet'],
+  ['Poblacion','Atok','Benguet'],['Topdac','Atok','Benguet'],
+  // Bakun (7)
+  ['Ampusongan','Bakun','Benguet'],['Bagu','Bakun','Benguet'],['Dalipey','Bakun','Benguet'],
+  ['Gambang','Bakun','Benguet'],['Kayapa','Bakun','Benguet'],['Poblacion','Bakun','Benguet'],
+  ['Sinacbat','Bakun','Benguet'],
+  // Bokod (10)
+  ['Ambuclao','Bokod','Benguet'],['Bila','Bokod','Benguet'],['Bobok-Bisal','Bokod','Benguet'],
+  ['Daclan','Bokod','Benguet'],['Ekip','Bokod','Benguet'],['Karao','Bokod','Benguet'],
+  ['Nawal','Bokod','Benguet'],['Pito','Bokod','Benguet'],['Poblacion','Bokod','Benguet'],
+  ['Tikey','Bokod','Benguet'],
+  // Buguias (14)
+  ['Abatan','Buguias','Benguet'],['Amgaleyguey','Buguias','Benguet'],['Amlimay','Buguias','Benguet'],
+  ['Baculongan Norte','Buguias','Benguet'],['Baculongan Sur','Buguias','Benguet'],
+  ['Bangao','Buguias','Benguet'],['Buyacaoan','Buguias','Benguet'],['Calamagan','Buguias','Benguet'],
+  ['Catlubong','Buguias','Benguet'],['Lengaoan','Buguias','Benguet'],['Loo','Buguias','Benguet'],
+  ['Natubleng','Buguias','Benguet'],['Poblacion','Buguias','Benguet'],['Sebang','Buguias','Benguet'],
+  // Itogon (9)
+  ['Ampucao','Itogon','Benguet'],['Dalupirip','Itogon','Benguet'],['Gumatdang','Itogon','Benguet'],
+  ['Loacan','Itogon','Benguet'],['Poblacion','Itogon','Benguet'],['Tinongdan','Itogon','Benguet'],
+  ['Tuding','Itogon','Benguet'],['Ucab','Itogon','Benguet'],['Virac','Itogon','Benguet'],
+  // Kabayan (13)
+  ['Adaoay','Kabayan','Benguet'],['Anchukey','Kabayan','Benguet'],['Ballay','Kabayan','Benguet'],
+  ['Bashoy','Kabayan','Benguet'],['Batan','Kabayan','Benguet'],['Duacan','Kabayan','Benguet'],
+  ['Eddet','Kabayan','Benguet'],['Gusaran','Kabayan','Benguet'],['Kabayan Barrio','Kabayan','Benguet'],
+  ['Lusod','Kabayan','Benguet'],['Pacso','Kabayan','Benguet'],['Poblacion','Kabayan','Benguet'],
+  ['Tawangan','Kabayan','Benguet'],
+  // Kapangan (15)
+  ['Balakbak','Kapangan','Benguet'],['Beleng-Belis','Kapangan','Benguet'],['Boklaoan','Kapangan','Benguet'],
+  ['Cayapes','Kapangan','Benguet'],['Cuba','Kapangan','Benguet'],['Datakan','Kapangan','Benguet'],
+  ['Gadang','Kapangan','Benguet'],['Gasweling','Kapangan','Benguet'],['Labueg','Kapangan','Benguet'],
+  ['Paykek','Kapangan','Benguet'],['Poblacion Central','Kapangan','Benguet'],['Pongayan','Kapangan','Benguet'],
+  ['Pudong','Kapangan','Benguet'],['Sagubo','Kapangan','Benguet'],['Taba-ao','Kapangan','Benguet'],
+  // Kibungan (7)
+  ['Badeo','Kibungan','Benguet'],['Lubo','Kibungan','Benguet'],['Madaymen','Kibungan','Benguet'],
+  ['Palina','Kibungan','Benguet'],['Poblacion','Kibungan','Benguet'],['Sagpat','Kibungan','Benguet'],
+  ['Tacadang','Kibungan','Benguet'],
+  // La Trinidad (16)
+  ['Alapang','La Trinidad','Benguet'],['Alno','La Trinidad','Benguet'],['Ambiong','La Trinidad','Benguet'],
+  ['Bahong','La Trinidad','Benguet'],['Balili','La Trinidad','Benguet'],['Beckel','La Trinidad','Benguet'],
+  ['Betag','La Trinidad','Benguet'],['Bineng','La Trinidad','Benguet'],['Cruz','La Trinidad','Benguet'],
+  ['Lubas','La Trinidad','Benguet'],['Pico','La Trinidad','Benguet'],['Poblacion','La Trinidad','Benguet'],
+  ['Puguis','La Trinidad','Benguet'],['Shilan','La Trinidad','Benguet'],['Tawang','La Trinidad','Benguet'],
+  ['Wangal','La Trinidad','Benguet'],
+  // Mankayan (12)
+  ['Balili','Mankayan','Benguet'],['Bedbed','Mankayan','Benguet'],['Bulalacao','Mankayan','Benguet'],
+  ['Cabiten','Mankayan','Benguet'],['Colalo','Mankayan','Benguet'],['Guinaoang','Mankayan','Benguet'],
+  ['Paco','Mankayan','Benguet'],['Palasaan','Mankayan','Benguet'],['Poblacion','Mankayan','Benguet'],
+  ['Sapid','Mankayan','Benguet'],['Tabio','Mankayan','Benguet'],['Taneg','Mankayan','Benguet'],
+  // Sablan (8)
+  ['Bagong','Sablan','Benguet'],['Balluay','Sablan','Benguet'],['Banangan','Sablan','Benguet'],
+  ['Banengbeng','Sablan','Benguet'],['Bayabas','Sablan','Benguet'],['Kamog','Sablan','Benguet'],
+  ['Pappa','Sablan','Benguet'],['Poblacion','Sablan','Benguet'],
+  // Tuba (13)
+  ['Ansagan','Tuba','Benguet'],['Camp 3','Tuba','Benguet'],['Camp 4','Tuba','Benguet'],
+  ['Camp One','Tuba','Benguet'],['Nangalisan','Tuba','Benguet'],['Poblacion','Tuba','Benguet'],
+  ['San Pascual','Tuba','Benguet'],['Tabaan Norte','Tuba','Benguet'],['Tabaan Sur','Tuba','Benguet'],
+  ['Tadiangan','Tuba','Benguet'],['Taloy Norte','Tuba','Benguet'],['Taloy Sur','Tuba','Benguet'],
+  ['Twin Peaks','Tuba','Benguet'],
+  // Tublay (8)
+  ['Ambassador','Tublay','Benguet'],['Ambongdolan','Tublay','Benguet'],['Ba-ayan','Tublay','Benguet'],
+  ['Basil','Tublay','Benguet'],['Caponga','Tublay','Benguet'],['Daclan','Tublay','Benguet'],
+  ['Tublay Central','Tublay','Benguet'],['Tuel','Tublay','Benguet'],
+  // Mountain Province — Barlig (11)
+  ['Barlig','Barlig','Mountain Province'],['Chupac','Barlig','Mountain Province'],
+  ['Fiangtin','Barlig','Mountain Province'],['Gawaan','Barlig','Mountain Province'],
+  ['Karao','Barlig','Mountain Province'],['Latang','Barlig','Mountain Province'],
+  ['Lias','Barlig','Mountain Province'],['Lias Kanluran','Barlig','Mountain Province'],
+  ['Mainit','Barlig','Mountain Province'],['Malibcong','Barlig','Mountain Province'],
+  ['Poblacion','Barlig','Mountain Province'],
+  // Bauko (20)
+  ['Abatan','Bauko','Mountain Province'],['Bagnen Oriente','Bauko','Mountain Province'],
+  ['Bagnen Proper','Bauko','Mountain Province'],['Balintaugan','Bauko','Mountain Province'],
+  ['Banao','Bauko','Mountain Province'],['Bunga','Bauko','Mountain Province'],
+  ['Chupac','Bauko','Mountain Province'],['Conquista','Bauko','Mountain Province'],
+  ['Lingoy','Bauko','Mountain Province'],['Mabalite','Bauko','Mountain Province'],
+  ['Madella','Bauko','Mountain Province'],['Mainland','Bauko','Mountain Province'],
+  ['Namatec','Bauko','Mountain Province'],['Nanew','Bauko','Mountain Province'],
+  ['Poblacion','Bauko','Mountain Province'],['Sinto','Bauko','Mountain Province'],
+  ['Supang','Bauko','Mountain Province'],['Tanglagan','Bauko','Mountain Province'],
+  ['Tiboy','Bauko','Mountain Province'],['Toccucan','Bauko','Mountain Province'],
+  // Besao (13)
+  ['Agawa','Besao','Mountain Province'],['Ambaguio','Besao','Mountain Province'],
+  ['Banguitan','Besao','Mountain Province'],['Bes','Besao','Mountain Province'],
+  ['Catengan','Besao','Mountain Province'],['Gueday','Besao','Mountain Province'],
+  ['Lacmaan','Besao','Mountain Province'],['Laylaya','Besao','Mountain Province'],
+  ['Padangan','Besao','Mountain Province'],['Pandayan','Besao','Mountain Province'],
+  ['Poblacion','Besao','Mountain Province'],['Suyo','Besao','Mountain Province'],
+  ['Tamboan','Besao','Mountain Province'],
+  // Bontoc (14)
+  ['Alab Oriente','Bontoc','Mountain Province'],['Alab Proper','Bontoc','Mountain Province'],
+  ['Balili','Bontoc','Mountain Province'],['Caluttit','Bontoc','Mountain Province'],
+  ['Caneo','Bontoc','Mountain Province'],['Dalican','Bontoc','Mountain Province'],
+  ['Gonogon','Bontoc','Mountain Province'],['Guina-ang','Bontoc','Mountain Province'],
+  ['Maligcong','Bontoc','Mountain Province'],['Maluping','Bontoc','Mountain Province'],
+  ['Poblacion','Bontoc','Mountain Province'],['Samoki','Bontoc','Mountain Province'],
+  ['Talubin','Bontoc','Mountain Province'],['Tocucan','Bontoc','Mountain Province'],
+  // Natonin (8)
+  ['Alunogan','Natonin','Mountain Province'],['Balangao','Natonin','Mountain Province'],
+  ['Banao','Natonin','Mountain Province'],['Banawal','Natonin','Mountain Province'],
+  ['Buyasyas','Natonin','Mountain Province'],['Maducayan','Natonin','Mountain Province'],
+  ['Poblacion','Natonin','Mountain Province'],['Takong','Natonin','Mountain Province'],
+  // Paracelis (14)
+  ['Anonat','Paracelis','Mountain Province'],['Bacarni','Paracelis','Mountain Province'],
+  ['Bananao','Paracelis','Mountain Province'],['Bantay','Paracelis','Mountain Province'],
+  ['Bocos','Paracelis','Mountain Province'],['Dalipawen','Paracelis','Mountain Province'],
+  ['DocDoc','Paracelis','Mountain Province'],['Gawaan','Paracelis','Mountain Province'],
+  ['Latang','Paracelis','Mountain Province'],['Libertad','Paracelis','Mountain Province'],
+  ['Lumaba','Paracelis','Mountain Province'],['Palitod','Paracelis','Mountain Province'],
+  ['Poblacion','Paracelis','Mountain Province'],['Tawangan','Paracelis','Mountain Province'],
+  // Sabangan (7)
+  ['Balluyan','Sabangan','Mountain Province'],['Fanglayan','Sabangan','Mountain Province'],
+  ['Gueday','Sabangan','Mountain Province'],['Labueg','Sabangan','Mountain Province'],
+  ['Nacagang','Sabangan','Mountain Province'],['Poblacion','Sabangan','Mountain Province'],
+  ['Tanglag','Sabangan','Mountain Province'],
+  // Sadanga (8)
+  ['Anabel','Sadanga','Mountain Province'],['Bekigan','Sadanga','Mountain Province'],
+  ['Betwagan','Sadanga','Mountain Province'],['Demang','Sadanga','Mountain Province'],
+  ['Poblacion','Sadanga','Mountain Province'],['Sacasacan','Sadanga','Mountain Province'],
+  ['Sadanga','Sadanga','Mountain Province'],['Tucucan','Sadanga','Mountain Province'],
+  // Sagada (24)
+  ['Aguid','Sagada','Mountain Province'],['Ambasing','Sagada','Mountain Province'],
+  ['Angkeling','Sagada','Mountain Province'],['Antadao','Sagada','Mountain Province'],
+  ['Balugan','Sagada','Mountain Province'],['Bangaan','Sagada','Mountain Province'],
+  ['Banga-an','Sagada','Mountain Province'],['Dagdag','Sagada','Mountain Province'],
+  ['Demang','Sagada','Mountain Province'],['Fidelisan','Sagada','Mountain Province'],
+  ['Genugan','Sagada','Mountain Province'],['Lake Danum','Sagada','Mountain Province'],
+  ['Latang','Sagada','Mountain Province'],['Lufidan','Sagada','Mountain Province'],
+  ['Madongo','Sagada','Mountain Province'],['Maligcong','Sagada','Mountain Province'],
+  ['Nacagang','Sagada','Mountain Province'],['Pide','Sagada','Mountain Province'],
+  ['Poblacion','Sagada','Mountain Province'],['Suyo','Sagada','Mountain Province'],
+  ['Taccong','Sagada','Mountain Province'],['Tanulong','Sagada','Mountain Province'],
+  ['Tetep-an Lower','Sagada','Mountain Province'],['Tetep-an Upper','Sagada','Mountain Province'],
+  // Tadian (18)
+  ['Balaoa','Tadian','Mountain Province'],['Banaao','Tadian','Mountain Province'],
+  ['Banao','Tadian','Mountain Province'],['Bantey','Tadian','Mountain Province'],
+  ['Bila','Tadian','Mountain Province'],['Cadad-an','Tadian','Mountain Province'],
+  ['Cagubatan','Tadian','Mountain Province'],['Dacudac','Tadian','Mountain Province'],
+  ['Daguioman','Tadian','Mountain Province'],['Danac','Tadian','Mountain Province'],
+  ['Gaob','Tadian','Mountain Province'],['Lubon','Tadian','Mountain Province'],
+  ['Mabalite','Tadian','Mountain Province'],['Masla','Tadian','Mountain Province'],
+  ['Nangey','Tadian','Mountain Province'],['Poblacion','Tadian','Mountain Province'],
+  ['Tubo-tubo','Tadian','Mountain Province'],['Tumog','Tadian','Mountain Province']
+];
+
+let state={layers:[],activeLayerId:null};
+let utilizationData={}; // label (normalized) → 0-100
+let utilizationOn=false;
+let brgyLayer=null;
+let pendingLL=null;
+let editNap=null;
+let modalMode='add';
+let importLayerId=null;
+let activeBm='street';
+let csvOpen=false;
+
+function uid(){return 'id'+Date.now().toString(36)+Math.random().toString(36).slice(2);}
+
+function load(){
+  try{const d=localStorage.getItem(SKEY);if(d){state=JSON.parse(d);}}catch(e){}
+  if(!state.layers||!state.layers.length){
+    const id=uid();
+    state={layers:[{id,name:'Layer 1',color:COLORS[0],visible:true,clustered:true,naps:[]}],activeLayerId:id};
+  }
+  // Migrate old saved data
+  state.layers.forEach(l=>{
+    if(l.clustered===undefined)l.clustered=true;
+    if(l.collapsed===undefined)l.collapsed=false;
+  });
+  if(!state.activeLayerId)state.activeLayerId=state.layers[0]?.id;
+  // Load utilization data
+  try{const u=localStorage.getItem(UKEY);if(u)utilizationData=JSON.parse(u);}catch(e){}
+}
+
+function save(){
+  try{localStorage.setItem(SKEY,JSON.stringify(state));}
+  catch(e){toast('⚠ Storage full — export and clear some data');}
+}
+
+function saveUtil(){
+  try{localStorage.setItem(UKEY,JSON.stringify(utilizationData));}
+  catch(e){toast('⚠ Storage full');}
+}
+
+// ── Utilization color helpers ─────────────────────────────────────────────────
+// Parse a hex color (#rrggbb) to [r,g,b]
+function hexToRgb(hex){
+  const h=hex.replace('#','');
+  return[parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];
+}
+// Interpolate between two [r,g,b] arrays by t (0-1)
+function lerpRgb(a,b,t){
+  return[Math.round(a[0]+(b[0]-a[0])*t),Math.round(a[1]+(b[1]-a[1])*t),Math.round(a[2]+(b[2]-a[2])*t)];
+}
+function rgbToHex(r,g,b){return'#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('');}
+
+// Returns a color: layerColor at 0%, amber at 50%, red at 100%
+const GREEN=[22,163,74];  // #16a34a
+const AMBER=[245,158,11]; // #f59e0b
+const RED=[220,38,38];    // #dc2626
+function utilizationColor(layerColor,pct){
+  const p=Math.max(0,Math.min(100,pct))/100;
+  let rgb;
+  if(p<=0.5){rgb=lerpRgb(GREEN,AMBER,p*2);}
+  else{rgb=lerpRgb(AMBER,RED,(p-0.5)*2);}
+  return rgbToHex(rgb[0],rgb[1],rgb[2]);
+}
+
+// Build a CSS gradient for the legend matching a given layer color
+// If no layer color given, use a neutral blue as base
+function legendGradient(){
+  return'linear-gradient(to right,#16a34a 0%,#f59e0b 50%,#dc2626 100%)';
+}
+
+// Normalize label for lookup (trim, lowercase)
+function normLabel(s){return String(s||'').trim().toLowerCase();}
+
+function getUtil(label){
+  const v=utilizationData[normLabel(label)];
+  return(v===undefined||v===null)?null:v;
+}
+
+const map=L.map('map',{zoomControl:false}).setView([16.4023,120.5960],14);
+L.control.zoom({position:'bottomright'}).addTo(map);
+map.on('mousemove',e=>{
+  document.getElementById('sb-coords').textContent=e.latlng.lat.toFixed(5)+', '+e.latlng.lng.toFixed(5);
+});
+
+const tiles={
+  street:L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OSM',maxZoom:19}),
+  satellite:L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'© Esri',maxZoom:19}),
+  topo:L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{attribution:'© OpenTopoMap',maxZoom:17}),
+  dark:L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{attribution:'© CartoDB',maxZoom:19})
+};
+tiles.street.addTo(map);
+if(location.protocol==='file:'){
+  setTimeout(()=>toast('OpenStreetMap blocks maps opened as a local file. Open this page through a web server (e.g. http://localhost:8000) to see the street map.'),800);
+}
+
+document.querySelectorAll('.bm-btn').forEach(b=>b.addEventListener('click',function(){
+  map.removeLayer(tiles[activeBm]);
+  activeBm=this.dataset.bm;
+  tiles[activeBm].addTo(map);
+  document.querySelectorAll('.bm-btn').forEach(x=>x.classList.remove('on'));
+  this.classList.add('on');
+}));
+
+// ── Rendering globals ──────────────────────────────────────────────────────
+// Per-layer cluster groups: layerId → MarkerClusterGroup
+const clusterGroups={};
+// Per-point marker: napId → CircleMarker
+const mMap={};
+
+const canvasRenderer=L.canvas({padding:0.5});
+
+function mkCircle(lat,lng,color){
+  return L.circleMarker([lat,lng],{
+    renderer:canvasRenderer,
+    radius:6,
+    color:'#fff',
+    weight:2,
+    fillColor:color,
+    fillOpacity:1,
+    bubblingMouseEvents:false
+  });
+}
+
+function popHtml(lid,nid,n,color){
+  const pct=getUtil(n.label);
+  let utilHtml='';
+  if(pct!==null){
+    const fillColor=utilizationColor(color,pct);
+    utilHtml='<div class="nap-util-bar-wrap">'
+      +'<div class="nap-util-label"><span>Utilization</span><span style="color:'+fillColor+';font-weight:700;">'+pct+'%</span></div>'
+      +'<div class="nap-util-bar-bg"><div class="nap-util-bar-fill" style="width:'+pct+'%;background:'+fillColor+';"></div></div>'
+      +'</div>';
+  }
+  return '<div class="nap-popup">'
+    +'<div class="nap-popup-name"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+color+';margin-right:5px;vertical-align:middle;"></span>'+esc(n.label)+'</div>'
+    +(n.notes?'<div class="nap-popup-notes">'+esc(n.notes)+'</div>':'')
+    +'<div class="nap-popup-coord">'+n.lat.toFixed(5)+', '+n.lng.toFixed(5)+'</div>'
+    +utilHtml
+    +'<div class="nap-popup-actions">'
+    +'<button onclick="doEdit(\''+lid+'\',\''+nid+'\')">Edit</button>'
+    +'<button class="del" onclick="doDelNap(\''+lid+'\',\''+nid+'\')">Delete</button>'
+    +'</div></div>';
+}
+
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+function renderMarkers(){
+  // Collapse any expanded clusters before re-rendering
+  if(window._collapseExpandedClusters)window._collapseExpandedClusters();
+
+  const wantedLayers=new Set(state.layers.map(l=>l.id));
+  const wantedNaps=new Set();
+
+  // Remove groups for deleted layers
+  for(const lid of Object.keys(clusterGroups)){
+    if(!wantedLayers.has(lid)){
+      map.removeLayer(clusterGroups[lid]);
+      delete clusterGroups[lid];
+    }
+  }
+
+  let total=0;
+  state.layers.forEach(layer=>{
+    total+=layer.naps.length;
+    const wantCluster=layer.clustered!==false;
+    const existingGroup=clusterGroups[layer.id];
+
+    // If clustering preference changed, destroy the old group so we rebuild it
+    if(existingGroup){
+      const isClusterGroup=existingGroup instanceof L.MarkerClusterGroup;
+      if(wantCluster!==isClusterGroup){
+        // Move all markers out and nuke the group
+        existingGroup.getLayers().forEach(m=>{existingGroup.removeLayer(m);delete mMap[m._napId];});
+        map.removeLayer(existingGroup);
+        delete clusterGroups[layer.id];
+      }
+    }
+
+    // Create group if needed
+    if(!clusterGroups[layer.id]){
+      const grp=wantCluster
+        ? L.markerClusterGroup({
+            chunkedLoading:true,chunkInterval:50,chunkDelay:50,
+            maxClusterRadius:60,spiderfyOnMaxZoom:true,
+            showCoverageOnHover:false,zoomToBoundsOnClick:true
+          })
+        : L.layerGroup();
+      clusterGroups[layer.id]=grp;
+      map.addLayer(grp);
+    }
+    const grp=clusterGroups[layer.id];
+
+    // Sync visibility
+    if(!layer.visible){if(map.hasLayer(grp))map.removeLayer(grp);}
+    else{if(!map.hasLayer(grp))map.addLayer(grp);}
+
+    // Diff markers
+    const existingIds=new Set(Object.keys(mMap).filter(nid=>mMap[nid]._layerId===layer.id));
+    const desiredIds=new Set(layer.naps.map(n=>n.id));
+
+    for(const nid of existingIds){
+      if(!desiredIds.has(nid)){grp.removeLayer(mMap[nid]);delete mMap[nid];}
+    }
+
+    layer.naps.forEach(n=>{
+      wantedNaps.add(n.id);
+      // Determine the desired fill color for this point
+      const pct=getUtil(n.label);
+      const desiredColor=(utilizationOn&&pct!==null)?utilizationColor(layer.color,pct):layer.color;
+      if(mMap[n.id]){
+        const m=mMap[n.id];
+        // Update color if changed (layer color change OR util toggle)
+        if(m.options.fillColor!==desiredColor){
+          m.setStyle({fillColor:desiredColor});
+        }
+        // Always refresh popup so utilization bar stays in sync
+        m.setPopupContent(popHtml(layer.id,n.id,n,layer.color));
+      } else {
+        const m=mkCircle(n.lat,n.lng,desiredColor);
+        m._layerId=layer.id;
+        m._napId=n.id;
+        m.bindPopup(popHtml(layer.id,n.id,n,layer.color),{maxWidth:260});
+        grp.addLayer(m);
+        mMap[n.id]=m;
+      }
+    });
+  });
+
+  // Orphan cleanup
+  for(const nid of Object.keys(mMap)){
+    if(!wantedNaps.has(nid)){
+      const m=mMap[nid];
+      const grp=clusterGroups[m._layerId];
+      if(grp)grp.removeLayer(m);
+      delete mMap[nid];
+    }
+  }
+
+  document.getElementById('sb-total').textContent=total;
+  document.getElementById('sb-layers').textContent=state.layers.length;
+  const al=state.layers.find(l=>l.id===state.activeLayerId);
+  document.getElementById('sb-active').textContent=al?al.name:'—';
+  if(window._refreshLabels)window._refreshLabels();
+  // Re-apply utilization colors after any render (handles layer color changes, new points, etc.)
+  if(window._applyUtilColors)window._applyUtilColors();
+}
+
+// ── Virtual-scrolled points list ────────────────────────────────────────────
+const VROW_H=44; // px per row, must match .pt-row height
+function buildVirtualList(layer){
+  const naps=layer.naps;
+  const count=naps.length;
+  if(!count)return'';
+
+  const wrapperId='vwrap_'+layer.id;
+  // Render placeholder; actual rows injected by initVirtual() after DOM insertion
+  return `<div class="pts-list-wrap">
+    <div class="pts-count-label">${count} point${count!==1?'s':''} — scroll to browse</div>
+    <div class="pts-virtual" id="${wrapperId}" data-lid="${layer.id}" style="height:${Math.min(count,5)*VROW_H}px;">
+      <div class="pts-spacer" id="spc_${layer.id}" style="height:${count*VROW_H}px;"></div>
+      <div class="pts-visible" id="vis_${layer.id}"></div>
+    </div>
+  </div>`;
+}
+
+function initVirtual(layer){
+  const wrap=document.getElementById('vwrap_'+layer.id);
+  if(!wrap)return;
+  const vis=document.getElementById('vis_'+layer.id);
+  const naps=layer.naps;
+  const color=layer.color;
+  const lid=layer.id;
+
+  function render(){
+    const scrollTop=wrap.scrollTop;
+    const viewH=wrap.clientHeight;
+    const startIdx=Math.max(0,Math.floor(scrollTop/VROW_H)-2);
+    const endIdx=Math.min(naps.length-1,Math.ceil((scrollTop+viewH)/VROW_H)+2);
+    let html='';
+    for(let i=startIdx;i<=endIdx;i++){
+      const n=naps[i];
+      html+=`<div class="pt-row" style="position:absolute;top:${i*VROW_H}px;width:100%;box-sizing:border-box;" onclick="flyTo('${n.id}')">
+        <div class="pt-dot" style="background:${color};"></div>
+        <div class="pt-info">
+          <div class="pt-name">${esc(n.label)}</div>
+          <div class="pt-coord">${n.lat.toFixed(4)}, ${n.lng.toFixed(4)}</div>
+        </div>
+        <button class="pt-del" title="Delete" onclick="event.stopPropagation();doDelNap('${lid}','${n.id}')"><i class="ti ti-trash" style="font-size:13px;"></i></button>
+      </div>`;
+    }
+    vis.innerHTML=html;
+  }
+
+  wrap.addEventListener('scroll',render,{passive:true});
+  render();
+}
+
+function renderLayers(){
+  const el=document.getElementById('layer-list');
+  // Save outer list scroll position
+  const outerScroll=el.scrollTop;
+  // Save each layer's inner virtual-scroll position
+  const innerScrolls={};
+  state.layers.forEach(layer=>{
+    const wrap=document.getElementById('vwrap_'+layer.id);
+    if(wrap)innerScrolls[layer.id]=wrap.scrollTop;
+  });
+
+  el.innerHTML='';
+  state.layers.forEach(layer=>{
+    const collapsed=layer.collapsed===true;
+    const d=document.createElement('div');
+    d.className='lc'+(layer.id===state.activeLayerId?' active':'');
+    d.dataset.layerId=layer.id;
+    // NOTE: draggable is NOT set on the card — only on the grip handle below
+    d.innerHTML=`
+      <div class="lc-head" data-sel="${layer.id}">
+        <div class="lc-drag" data-layer-id="${layer.id}" draggable="true" title="Drag to reorder"><i class="ti ti-grip-vertical" style="font-size:14px;"></i></div>
+        <div class="lc-dot" style="background:${layer.color};"></div>
+        <div class="lc-name">${esc(layer.name)}</div>
+        <div class="lc-count">${layer.naps.length}</div>
+        <div class="lc-eye" data-vis="${layer.id}" title="Toggle visibility">
+          <i class="ti ${layer.visible?'ti-eye':'ti-eye-off'}" style="font-size:15px;"></i>
+        </div>
+        <div class="lc-collapse ${collapsed?'':'open'}" data-tog="${layer.id}" title="${collapsed?'Expand':'Collapse'}">
+          <i class="ti ti-chevron-right" style="font-size:13px;"></i>
+        </div>
+      </div>
+      <div class="lc-body ${collapsed?'collapsed':''}">
+        ${buildVirtualList(layer)}
+        <div class="lc-actions">
+          <button data-ren="${layer.id}" title="Rename"><i class="ti ti-edit"></i></button>
+          <button data-col="${layer.id}" title="Change color"><i class="ti ti-palette"></i></button>
+          <button data-clu="${layer.id}" title="${layer.clustered!==false?'Disable clustering':'Enable clustering'}" style="${layer.clustered!==false?'color:#2563eb;':'color:#9ca3af;'}"><i class="ti ti-hierarchy-2"></i></button>
+          <button data-exp="${layer.id}" title="Export CSV"><i class="ti ti-download"></i></button>
+          <button data-imp="${layer.id}" title="Import CSV"><i class="ti ti-upload"></i></button>
+          <button class="del" data-del="${layer.id}" title="Delete layer"><i class="ti ti-trash"></i></button>
+        </div>
+      </div>`;
+    el.appendChild(d);
+    if(!collapsed){
+      initVirtual(layer);
+      // Restore inner scroll after render tick
+      if(innerScrolls[layer.id]){
+        requestAnimationFrame(()=>{
+          const wrap=document.getElementById('vwrap_'+layer.id);
+          if(wrap)wrap.scrollTop=innerScrolls[layer.id];
+        });
+      }
+    }
+  });
+
+  // Restore outer scroll position
+  el.scrollTop=outerScroll;
+  renderMarkers();
+}
+
+window.flyTo=function(nid){
+  const m=mMap[nid];
+  if(!m)return;
+  // Unspiderfy and zoom to the marker's position
+  const latlng=m.getLatLng();
+  map.setView(latlng,17);
+  // Need to open popup after cluster has expanded
+  setTimeout(()=>{
+    const vm=mMap[nid];
+    if(vm){
+      const parent=vm.__parent;
+      if(parent&&parent._group)parent._group.zoomToShowLayer(vm,()=>vm.openPopup());
+      else vm.openPopup();
+    }
+  },300);
+};
+
+document.getElementById('layer-list').addEventListener('click',function(e){
+  const t=e.target.closest('[data-sel],[data-vis],[data-tog],[data-ren],[data-col],[data-clu],[data-exp],[data-imp],[data-del]');
+  if(!t)return;e.stopPropagation();
+  if(t.dataset.sel){
+    // Don't activate layer when clicking eye, collapse toggle, or drag handle
+    if(e.target.closest('[data-vis],[data-tog],.lc-drag'))return;
+    state.activeLayerId=t.dataset.sel;save();renderLayers();return;
+  }
+  if(t.dataset.vis){const l=state.layers.find(x=>x.id===t.dataset.vis);if(l){l.visible=!l.visible;save();renderLayers();}return;}
+  if(t.dataset.tog){
+    const l=state.layers.find(x=>x.id===t.dataset.tog);
+    if(l){l.collapsed=!l.collapsed;save();renderLayers();}
+    return;
+  }
+  if(t.dataset.clu){const l=state.layers.find(x=>x.id===t.dataset.clu);if(l){l.clustered=l.clustered===false?true:false;save();renderLayers();toast(l.name+': clustering '+(l.clustered?'on':'off'));}return;}
+  if(t.dataset.ren){const l=state.layers.find(x=>x.id===t.dataset.ren);if(!l)return;const n=prompt('Rename layer:',l.name);if(n&&n.trim()){l.name=n.trim();save();renderLayers();}return;}
+  if (t.dataset.col) {
+    const l = state.layers.find(x => x.id === t.dataset.col);
+    if (!l) return;
+    
+    // Create a hidden native color picker
+    const colorInput = document.createElement('input');
+    colorInput.type = 'color';
+    colorInput.value = l.color; // Initialize with the layer's current color
+    colorInput.style.display = 'none';
+    document.body.appendChild(colorInput);
+
+    // Update layer color in real-time as the user drags the picker
+    colorInput.addEventListener('input', function(e) {
+      l.color = e.target.value;
+      save();
+      clearTimeout(colorInput._t);
+      colorInput._t=setTimeout(()=>renderLayers(),80);
+    });
+
+    // Clean up the DOM once the user closes the color picker
+    colorInput.addEventListener('change', function() {
+      document.body.removeChild(colorInput);
+    });
+
+    // Trigger the color picker dialog
+    colorInput.click();
+    return;
+  }
+  if(t.dataset.exp){exportLayer(t.dataset.exp);return;}
+  if(t.dataset.imp){
+    importLayerId=t.dataset.imp;
+    const l=state.layers.find(x=>x.id===importLayerId);
+    openPanel('Import into "'+l.name+'"','import');return;
+  }
+  if(t.dataset.del){
+    if(state.layers.length<=1){toast('Cannot delete the last layer');return;}
+    if(!confirm('Delete layer and all its NAPs?'))return;
+    const id=t.dataset.del;
+    state.layers=state.layers.filter(l=>l.id!==id);
+    if(state.activeLayerId===id)state.activeLayerId=state.layers[0]?.id;
+    save();renderLayers();return;
+  }
+});
+
+function addLayer(){
+  const name=prompt('Layer name:','Layer '+(state.layers.length+1));
+  if(!name||!name.trim())return;
+  const id=uid();
+  state.layers.push({id,name:name.trim(),color:COLORS[state.layers.length%COLORS.length],visible:true,clustered:true,naps:[]});
+  state.activeLayerId=id;save();renderLayers();
+}
+document.getElementById('btn-add-layer').addEventListener('click',addLayer);
+document.getElementById('btn-add-layer2').addEventListener('click',addLayer);
+
+document.getElementById('btn-collapse-all').addEventListener('click',function(){
+  state.layers.forEach(l=>l.collapsed=true);save();renderLayers();
+});
+document.getElementById('btn-expand-all').addEventListener('click',function(){
+  state.layers.forEach(l=>l.collapsed=false);save();renderLayers();
+});
+
+// ── Drag-and-drop layer reordering ───────────────────────────────────────────
+let dragSrcId=null;
+
+// dragstart fires on the grip handle (which has draggable="true")
+document.getElementById('layer-list').addEventListener('dragstart',function(e){
+  const handle=e.target.closest('.lc-drag[data-layer-id]');
+  if(!handle)return;
+  dragSrcId=handle.dataset.layerId;
+  // Style the parent card
+  const card=handle.closest('.lc');
+  if(card)card.classList.add('dragging');
+  e.dataTransfer.effectAllowed='move';
+  e.dataTransfer.setData('text/plain',dragSrcId);
+});
+
+document.getElementById('layer-list').addEventListener('dragover',function(e){
+  if(!dragSrcId)return;
+  const card=e.target.closest('.lc[data-layer-id]');
+  if(!card)return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect='move';
+  document.querySelectorAll('#layer-list .lc.drag-over').forEach(el=>el.classList.remove('drag-over'));
+  if(card.dataset.layerId!==dragSrcId)card.classList.add('drag-over');
+});
+
+document.getElementById('layer-list').addEventListener('dragleave',function(e){
+  const card=e.target.closest('.lc[data-layer-id]');
+  // Only clear if leaving the card entirely (not just moving to a child)
+  if(card&&!card.contains(e.relatedTarget))card.classList.remove('drag-over');
+});
+
+document.getElementById('layer-list').addEventListener('drop',function(e){
+  const card=e.target.closest('.lc[data-layer-id]');
+  if(!card)return;
+  e.preventDefault();
+  const targetId=card.dataset.layerId;
+  card.classList.remove('drag-over');
+  if(!dragSrcId||dragSrcId===targetId)return;
+  const fromIdx=state.layers.findIndex(l=>l.id===dragSrcId);
+  const toIdx=state.layers.findIndex(l=>l.id===targetId);
+  if(fromIdx<0||toIdx<0)return;
+  const [moved]=state.layers.splice(fromIdx,1);
+  state.layers.splice(toIdx,0,moved);
+  dragSrcId=null;
+  save();renderLayers();
+});
+
+document.getElementById('layer-list').addEventListener('dragend',function(){
+  dragSrcId=null;
+  document.querySelectorAll('#layer-list .lc.dragging,.lc.drag-over').forEach(el=>{
+    el.classList.remove('dragging','drag-over');
+  });
+});
+
+function exportLayer(lid){
+  const l=state.layers.find(x=>x.id===lid);if(!l)return;
+  let csv='lat,lng,label,notes\n';
+  l.naps.forEach(n=>{csv+=n.lat.toFixed(6)+','+n.lng.toFixed(6)+',"'+(n.label||'')+'","'+(n.notes||'')+'"\n';});
+  dl(l.name.replace(/\s+/g,'_')+'_naps.csv',csv);
+  toast('Exported '+l.naps.length+' NAPs');
+}
+
+document.getElementById('btn-exp').addEventListener('click',function(){
+  if(!state.layers.some(l=>l.naps.length)){toast('No NAPs to export');return;}
+  let csv='layer,lat,lng,label,notes\n';
+  state.layers.forEach(l=>{l.naps.forEach(n=>{csv+='"'+(l.name||'')+'",'+n.lat.toFixed(6)+','+n.lng.toFixed(6)+',"'+(n.label||'')+'","'+(n.notes||'')+'"\n';});});
+  dl('baguio_all_naps.csv',csv);toast('Exported all NAPs');
+});
+
+function dl(fname,content){
+  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(content);a.download=fname;a.click();
+}
+
+// CSV File Import
+document.getElementById('btn-imp-csv').addEventListener('click',function(){
+  document.getElementById('csv-file-input').value=''; // reset so same file can be re-imported
+  document.getElementById('csv-file-input').click();
+});
+
+document.getElementById('csv-file-input').addEventListener('change',function(e){
+  const file=e.target.files[0];
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(ev){
+    const text=ev.target.result;
+    const lines=text.split('\n').map(l=>l.trim()).filter(l=>l.length);
+    if(!lines.length){toast('CSV file is empty');return;}
+
+    // Detect format: if first column header is "layer" → full export format (layer,lat,lng,label,notes)
+    // Otherwise assume single-layer format (lat,lng,label,notes)
+    const firstLine=lines[0].toLowerCase();
+    const hasLayerCol=firstLine.startsWith('layer');
+    const dataLines=lines.filter(l=>!l.toLowerCase().startsWith('layer')&&!l.toLowerCase().startsWith('lat'));
+
+    if(!dataLines.length){toast('No data rows found in CSV');return;}
+
+    let totalAdded=0;
+    let totalSkipped=0;
+    let layersAffected=0;
+
+    if(hasLayerCol){
+      // Full export format — group rows by layer name
+      const groups={};
+      dataLines.forEach(line=>{
+        const p=parseCSVLine(line);
+        if(p.length<3)return;
+        const layerName=(p[0]||'').trim()||'Imported';
+        const lat=parseFloat(p[1]),lng=parseFloat(p[2]);
+        if(isNaN(lat)||isNaN(lng))return;
+        if(!groups[layerName])groups[layerName]=[];
+        groups[layerName].push({lat,lng,label:(p[3]||'').trim(),notes:(p[4]||'').trim()});
+      });
+
+      Object.entries(groups).forEach(([layerName,points])=>{
+        // Duplicate check — case-insensitive match on layer name
+        let existing=state.layers.find(l=>l.name.toLowerCase()===layerName.toLowerCase());
+        if(!existing){
+          // Create new layer
+          const id=uid();
+          existing={id,name:layerName,color:COLORS[state.layers.length%COLORS.length],visible:true,naps:[]};
+          state.layers.push(existing);
+          layersAffected++;
+        }
+        // Build a Set of existing coords for O(1) dedup
+        const existCoords=new Set(existing.naps.map(n=>n.lat.toFixed(6)+','+n.lng.toFixed(6)));
+        // Merge points into the layer — skip if exact lat/lng already exists
+        points.forEach(pt=>{
+          const key=pt.lat.toFixed(6)+','+pt.lng.toFixed(6);
+          if(existCoords.has(key)){totalSkipped++;return;}
+          existCoords.add(key);
+          existing.naps.push({id:uid(),lat:pt.lat,lng:pt.lng,
+            label:pt.label||('NAP-'+String(existing.naps.length+1).padStart(3,'0')),
+            notes:pt.notes});
+          totalAdded++;
+        });
+      });
+
+    } else {
+      // Single-layer format (lat,lng,label,notes) — import into active layer
+      const layer=state.layers.find(l=>l.id===state.activeLayerId);
+      if(!layer){toast('No active layer to import into');return;}
+      const existCoords=new Set(layer.naps.map(n=>n.lat.toFixed(6)+','+n.lng.toFixed(6)));
+      dataLines.forEach(line=>{
+        const p=parseCSVLine(line);
+        if(p.length<2)return;
+        const lat=parseFloat(p[0]),lng=parseFloat(p[1]);
+        if(isNaN(lat)||isNaN(lng))return;
+        const key=lat.toFixed(6)+','+lng.toFixed(6);
+        if(existCoords.has(key)){totalSkipped++;return;}
+        existCoords.add(key);
+        layer.naps.push({id:uid(),lat,lng,
+          label:(p[2]||'').trim()||('NAP-'+String(layer.naps.length+1).padStart(3,'0')),
+          notes:(p[3]||'').trim()});
+        totalAdded++;
+      });
+      layersAffected=1;
+    }
+
+    if(!totalAdded&&!totalSkipped){toast('No valid rows found in CSV');return;}
+    if(!totalAdded&&totalSkipped){toast('All '+totalSkipped+' points already exist — nothing added');return;}
+    if(!state.activeLayerId)state.activeLayerId=state.layers[0]?.id;
+    save();renderLayers();
+    const skipNote=totalSkipped?' ('+totalSkipped+' duplicate'+(totalSkipped!==1?'s':'')+' skipped)':'';
+    toast('Imported '+totalAdded+' NAPs across '+layersAffected+' layer'+(layersAffected!==1?'s':'')+skipNote);
+  };
+  reader.readAsText(file);
+});
+
+// Map click
+map.on('click',function(e){
+  if(!state.activeLayerId)return;
+  pendingLL=e.latlng;editNap=null;importLayerId=null;modalMode='add';
+  const layer=state.layers.find(l=>l.id===state.activeLayerId);
+  const cnt=(layer?layer.naps.length:0)+1;
+  document.getElementById('m-label').value='NAP-'+String(cnt).padStart(3,'0');
+  document.getElementById('m-notes').value='';
+  setCsvOpen(false);
+
+  // Position the panel near the pointer
+  const panel = document.getElementById('panel');
+  const mapW = document.getElementById('map').clientWidth;
+  const mapH = document.getElementById('map').clientHeight;
+  
+  // Calculate default position (slightly offset from the pointer)
+  let leftPos = e.containerPoint.x + 15;
+  let topPos = e.containerPoint.y + 15;
+
+  // Prevent the panel from overflowing the right or bottom edges
+  if (leftPos + 260 > mapW) leftPos = e.containerPoint.x - 255;
+  if (topPos + 220 > mapH) topPos = e.containerPoint.y - Math.max(100, e.containerPoint.y - mapH + 220);
+
+  // Apply the new coordinates and clear the fixed 'right' style
+  panel.style.left = Math.max(10, leftPos) + 'px';
+  panel.style.top = Math.max(10, topPos) + 'px';
+  panel.style.right = 'auto';
+
+  openPanel('Add NAP — '+(layer?layer.name:''),'add');
+});
+
+window.doEdit=function(lid,nid){
+  const layer=state.layers.find(l=>l.id===lid);
+  const n=layer&&layer.naps.find(x=>x.id===nid);
+  if(!n)return;
+  editNap={lid,nid};pendingLL=null;importLayerId=null;modalMode='edit';
+  document.getElementById('m-label').value=n.label||'';
+  document.getElementById('m-notes').value=n.notes||'';
+  setCsvOpen(false);
+  document.getElementById('imp-toggle').style.display='none';
+  
+  // Reset position to top-right
+  const panel = document.getElementById('panel');
+  panel.style.top = '10px';
+  panel.style.right = '10px';
+  panel.style.left = 'auto';
+  
+  openPanel('Edit NAP','edit');
+};
+
+window.doDelNap=function(lid,nid){
+  const layer=state.layers.find(l=>l.id===lid);
+  if(!layer)return;
+  layer.naps=layer.naps.filter(n=>n.id!==nid);
+  save();renderLayers();map.closePopup();toast('NAP deleted');
+};
+
+function openPanel(title,mode){
+  document.getElementById('panel-title').textContent=title;
+  document.getElementById('imp-toggle').style.display=(mode==='edit')?'none':'block';
+  document.getElementById('panel').style.display='block';
+}
+
+function closePanel(){
+  document.getElementById('panel').style.display='none';
+  pendingLL=null;editNap=null;modalMode='add';importLayerId=null;
+  setCsvOpen(false);
+  document.getElementById('imp-toggle').style.display='block';
+}
+
+function setCsvOpen(open){
+  csvOpen=open;
+  document.getElementById('csv-block').style.display=open?'block':'none';
+  document.getElementById('imp-toggle').textContent=open?'hide import':'or import CSV rows';
+}
+
+document.getElementById('imp-toggle').addEventListener('click',function(){setCsvOpen(!csvOpen);});
+document.getElementById('panel-close').addEventListener('click',closePanel);
+document.getElementById('panel-cancel').addEventListener('click',closePanel);
+
+document.getElementById('panel-save').addEventListener('click',function(){
+  const label=document.getElementById('m-label').value.trim();
+  const notes=document.getElementById('m-notes').value.trim();
+  const csvVal=document.getElementById('csv-area').value.trim();
+
+  if((modalMode==='add'||modalMode==='import')&&csvOpen&&csvVal){
+    // import mode
+    const lid=importLayerId||state.activeLayerId;
+    const layer=state.layers.find(l=>l.id===lid);
+    if(!layer)return;
+    const lines=csvVal.split('\n').filter(l=>l.trim()&&!l.toLowerCase().startsWith('lat'));
+    let added=0;
+    lines.forEach(line=>{
+      const p=parseCSVLine(line);
+      if(p.length<2)return;
+      const lat=parseFloat(p[0]),lng=parseFloat(p[1]);
+      if(isNaN(lat)||isNaN(lng))return;
+      layer.naps.push({id:uid(),lat,lng,label:p[2]||('NAP-'+String(layer.naps.length+1).padStart(3,'0')),notes:p[3]||''});
+      added++;
+    });
+    save();renderLayers();closePanel();toast('Imported '+added+' NAPs');
+    return;
+  }
+
+  if(modalMode==='edit'&&editNap){
+    const layer=state.layers.find(l=>l.id===editNap.lid);
+    const n=layer&&layer.naps.find(x=>x.id===editNap.nid);
+    if(n){n.label=label||n.label;n.notes=notes;}
+    save();renderLayers();closePanel();return;
+  }
+
+  if(modalMode==='add'&&pendingLL&&state.activeLayerId){
+    const layer=state.layers.find(l=>l.id===state.activeLayerId);
+    if(layer){layer.naps.push({id:uid(),lat:pendingLL.lat,lng:pendingLL.lng,label:label||'NAP',notes});}
+    save();renderLayers();closePanel();return;
+  }
+});
+
+function parseCSVLine(line){
+  const res=[];let cur='',inQ=false;
+  for(let i=0;i<line.length;i++){
+    if(line[i]==='"'){inQ=!inQ;}
+    else if(line[i]===','&&!inQ){res.push(cur.trim());cur='';}
+    else{cur+=line[i];}
+  }
+  res.push(cur.trim());
+  return res;
+}
+
+// NAP label search
+(function(){
+  const input=document.getElementById('nap-input');
+  const dd=document.getElementById('nap-dd');
+  const clr=document.getElementById('nap-clr-btn');
+
+  function closeDD(){dd.style.display='none';dd.innerHTML='';}
+
+  input.addEventListener('input',function(){
+    const q=this.value.toLowerCase().trim();
+    closeDD();
+    clr.style.display=q?'block':'none';
+    if(!q)return;
+
+    // Collect all matching NAPs across all layers
+    const hits=[];
+    state.layers.forEach(layer=>{
+      layer.naps.forEach(n=>{
+        if(
+          (n.label&&n.label.toLowerCase().includes(q))||
+          (n.notes&&n.notes.toLowerCase().includes(q))
+        ){
+          hits.push({n,layer});
+          if(hits.length>=20)return; // cap at 20 results
+        }
+      });
+      if(hits.length>=20)return;
+    });
+
+    if(!hits.length){
+      dd.innerHTML='<div class="ni-empty">No NAPs found</div>';
+      dd.style.display='block';
+      return;
+    }
+
+    hits.forEach(({n,layer})=>{
+      const d=document.createElement('div');
+      d.className='ni';
+      // Highlight matching part of label
+      const label=esc(n.label);
+      const ql=q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+      const hlLabel=label.replace(new RegExp('('+ql+')','gi'),'<mark style="background:#fef08a;border-radius:2px;padding:0 1px;">$1</mark>');
+      d.innerHTML=
+        '<div class="ni-dot" style="background:'+layer.color+';"></div>'+
+        '<div class="ni-info">'+
+          '<div class="ni-name">'+hlLabel+'</div>'+
+          '<div class="ni-sub">'+esc(layer.name)+(n.notes?' · '+esc(n.notes.slice(0,40)):'')+'</div>'+
+        '</div>';
+      d.addEventListener('click',()=>{
+        closeDD();
+        input.value='';
+        clr.style.display='none';
+        flyTo(n.id);
+      });
+      dd.appendChild(d);
+    });
+    dd.style.display='block';
+  });
+
+  clr.addEventListener('click',function(){
+    input.value='';closeDD();clr.style.display='none';
+  });
+
+  // Close dropdown when clicking outside
+  document.addEventListener('click',function(e){
+    if(!document.getElementById('nap-search-sec').contains(e.target))closeDD();
+  });
+})();
+
+// Barangay search
+const brgyInput=document.getElementById('brgy-input');
+const brgyDD=document.getElementById('brgy-dd');
+const brgyTag=document.getElementById('brgy-tag');
+const brgyTagName=document.getElementById('brgy-tag-name');
+const clrBtn=document.getElementById('clr-btn');
+
+brgyInput.addEventListener('input',function(){
+  const q=this.value.toLowerCase().trim();
+  brgyDD.style.display='none';brgyDD.innerHTML='';
+  clrBtn.style.display=q?'block':'none';
+  if(!q)return;
+  const hits=BARANGAYS.filter(b=>b[0].toLowerCase().includes(q)||b[1].toLowerCase().includes(q)||b[2].toLowerCase().includes(q)).slice(0,10);
+  if(!hits.length)return;
+  hits.forEach(b=>{
+    const d=document.createElement('div');d.className='bi';
+    d.innerHTML='<div class="bi-name">'+esc(b[0])+'</div><div class="bi-loc">'+esc(b[1])+', '+esc(b[2])+'</div>';
+    d.addEventListener('click',()=>searchBrgy(b));
+    brgyDD.appendChild(d);
+  });
+  brgyDD.style.display='block';
+});
+
+clrBtn.addEventListener('click',function(){
+  brgyInput.value='';brgyDD.style.display='none';clrBtn.style.display='none';
+});
+
+document.getElementById('brgy-clr-tag').addEventListener('click',function(){
+  if(brgyLayer){map.removeLayer(brgyLayer);brgyLayer=null;}
+  brgyTag.style.display='none';
+});
+
+function searchBrgy(b){
+  brgyDD.style.display='none';
+  brgyInput.value=b[0]+', '+b[1];
+  clrBtn.style.display='block';
+  if(brgyLayer){map.removeLayer(brgyLayer);brgyLayer=null;}
+  const q=b[0]+', '+b[1]+', '+b[2]+', Philippines';
+  fetch('https://nominatim.openstreetmap.org/search?q='+encodeURIComponent(q)+'&format=geojson&limit=1&polygon_geojson=1')
+    .then(r=>r.json()).then(data=>{
+      if(!data.features||!data.features.length){toast('Not found in map data');return;}
+      const f=data.features[0];
+      brgyTagName.textContent=b[0]+' — '+b[1];
+      brgyTag.style.display='flex';
+      if(f.geometry.type==='Polygon'||f.geometry.type==='MultiPolygon'){
+        brgyLayer=L.geoJSON(f,{style:{color:'#ea580c',weight:2.5,fillColor:'#ea580c',fillOpacity:0.12,dashArray:'5 4'}}).addTo(map);
+        map.fitBounds(brgyLayer.getBounds(),{maxZoom:16,padding:[30,30]});
+      }else{
+        const[lng,lat]=f.geometry.coordinates;
+        map.setView([lat,lng],16);
+        brgyLayer=L.circle([lat,lng],{radius:350,color:'#ea580c',fillColor:'#ea580c',fillOpacity:0.18}).addTo(map);
+      }
+    }).catch(()=>toast('Search failed'));
+}
+
+let toastT;
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2800);
+}
+
+function openImport(lid){
+  importLayerId=lid;modalMode='import';pendingLL=null;editNap=null;
+  const l=state.layers.find(x=>x.id===lid);
+  document.getElementById('m-label').value='';
+  document.getElementById('m-notes').value='';
+  document.getElementById('csv-area').value='';
+  setCsvOpen(true);
+  
+  // Reset position to top-right
+  const panel = document.getElementById('panel');
+  panel.style.top = '10px';
+  panel.style.right = '10px';
+  panel.style.left = 'auto';
+
+  openPanel('Import into "'+(l?l.name:'')+'"','import');
+}
+
+// ── Feature 2: Go-to-location / coordinates bar ──────────────────────────────
+(function(){
+  const locInput=document.getElementById('goto-loc-input');
+  const coordToggle=document.getElementById('goto-coord-toggle');
+  const coordRow=document.getElementById('goto-coord-row');
+  const latInput=document.getElementById('goto-lat');
+  const lngInput=document.getElementById('goto-lng');
+  const goBtn=document.getElementById('goto-go');
+  const dd=document.getElementById('goto-dd');
+  const bar=document.getElementById('goto-bar');
+
+  let gotoPin=null;
+  let searchTimer=null;
+  let coordsVisible=false;
+
+  // Prevent map clicks from firing when clicking the bar
+  L.DomEvent.disableClickPropagation(bar);
+  L.DomEvent.disableScrollPropagation(bar);
+
+  function dropPin(lat,lng,label){
+    if(gotoPin)map.removeLayer(gotoPin);
+    gotoPin=L.marker([lat,lng],{
+      icon:L.divIcon({
+        className:'',
+        html:'<div style="width:18px;height:18px;border-radius:50%;background:#ea580c;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.4);"></div>',
+        iconSize:[18,18],iconAnchor:[9,9]
+      })
+    }).addTo(map);
+    if(label)gotoPin.bindPopup('<div style="font-size:12px;padding:6px 8px;"><b>'+esc(label)+'</b><br><span style="font-size:10px;color:#9ca3af;font-family:monospace;">'+lat.toFixed(5)+', '+lng.toFixed(5)+'</span></div>').openPopup();
+    map.setView([lat,lng],16);
+  }
+
+  function closeDD(){
+    dd.innerHTML='';
+    dd.classList.remove('show');
+    bar.classList.remove('expanded');
+  }
+
+  // Location search via Nominatim
+  locInput.addEventListener('input',function(){
+    clearTimeout(searchTimer);
+    const q=this.value.trim();
+    if(!q){closeDD();return;}
+    searchTimer=setTimeout(()=>{
+      dd.innerHTML='<div class="gi-empty"><i class="ti ti-loader" style="font-size:14px;"></i> Searching…</div>';
+      dd.classList.add('show');
+      bar.classList.add('expanded');
+      fetch('https://nominatim.openstreetmap.org/search?q='+encodeURIComponent(q)+'&format=json&limit=6&countrycodes=ph&addressdetails=1')
+        .then(r=>r.json())
+        .then(results=>{
+          dd.innerHTML='';
+          if(!results.length){
+            dd.innerHTML='<div class="gi-empty">No locations found</div>';
+            return;
+          }
+          results.forEach(r=>{
+            const lat=parseFloat(r.lat),lng=parseFloat(r.lon);
+            const name=r.name||r.display_name.split(',')[0];
+            const addr=r.display_name;
+            const d=document.createElement('div');
+            d.className='gi';
+            d.innerHTML='<i class="ti ti-map-pin"></i><div class="gi-text"><div class="gi-name">'+esc(name)+'</div><div class="gi-addr">'+esc(addr)+'</div></div>';
+            d.addEventListener('click',()=>{
+              locInput.value=name;
+              closeDD();
+              dropPin(lat,lng,name);
+            });
+            dd.appendChild(d);
+          });
+        })
+        .catch(()=>{dd.innerHTML='<div class="gi-empty">Search failed</div>';});
+    },400);
+  });
+
+  locInput.addEventListener('keydown',function(e){
+    if(e.key==='Escape'){closeDD();locInput.value='';}
+    if(e.key==='Enter'){
+      // If there's exactly one result, auto-select it
+      const first=dd.querySelector('.gi');
+      if(first)first.click();
+    }
+  });
+
+  // Coords toggle
+  coordToggle.addEventListener('click',function(){
+    coordsVisible=!coordsVisible;
+    coordRow.classList.toggle('show',coordsVisible);
+    coordToggle.innerHTML=coordsVisible
+      ?'<i class="ti ti-x"></i>'
+      :'<i class="ti ti-crosshair"></i> Coords';
+  });
+
+  // Go to coords
+  function gotoCoords(){
+    const lat=parseFloat(latInput.value.trim());
+    const lng=parseFloat(lngInput.value.trim());
+    if(isNaN(lat)||isNaN(lng)||lat<-90||lat>90||lng<-180||lng>180){
+      toast('Invalid coordinates');return;
+    }
+    dropPin(lat,lng,'');
+  }
+  goBtn.addEventListener('click',gotoCoords);
+  lngInput.addEventListener('keydown',e=>{if(e.key==='Enter')gotoCoords();});
+  latInput.addEventListener('keydown',e=>{if(e.key==='Enter')lngInput.focus();});
+
+  // Close dropdown on outside click
+  document.addEventListener('click',function(e){
+    if(!bar.contains(e.target))closeDD();
+  });
+
+  // Remove goto pin when map is clicked elsewhere
+  map.on('click',function(){
+    if(gotoPin){map.removeLayer(gotoPin);gotoPin=null;}
+  });
+})();
+
+// ── Expand / collapse visible clusters toggle ────────────────────────────────
+(function(){
+  const btn=document.getElementById('btn-expand-clusters');
+  let expanded=false;
+
+  // When expanded: markers in view are pulled out of their cluster group
+  // and placed directly on the map so they all show individually.
+  // An unclustered LayerGroup holds these temporary direct markers per layer.
+  const unclustered={}; // layerId → L.LayerGroup of temp markers
+
+  function expandAll(){
+    const bounds=map.getBounds().pad(0.1);
+    Object.entries(clusterGroups).forEach(([lid,cg])=>{
+      if(!map.hasLayer(cg))return;
+      const layer=state.layers.find(l=>l.id===lid);
+      if(!layer)return;
+
+      // Collect naps in view
+      const inView=layer.naps.filter(n=>bounds.contains([n.lat,n.lng]));
+      if(!inView.length)return;
+
+      // Remove their markers from the cluster group temporarily
+      const lg=L.layerGroup().addTo(map);
+      unclustered[lid]=lg;
+
+      inView.forEach(n=>{
+        const existing=mMap[n.id];
+        if(existing){
+          cg.removeLayer(existing);
+          lg.addLayer(existing);
+        }
+      });
+    });
+
+    expanded=true;
+    btn.classList.add('active');
+    btn.innerHTML='<i class="ti ti-arrows-minimize"></i> Collapse clusters';
+  }
+
+  function collapseAll(){
+    Object.entries(unclustered).forEach(([lid,lg])=>{
+      const cg=clusterGroups[lid];
+      if(!cg){lg.clearLayers();map.removeLayer(lg);return;}
+      // Move markers back into their cluster group
+      lg.getLayers().forEach(m=>{
+        lg.removeLayer(m);
+        cg.addLayer(m);
+      });
+      map.removeLayer(lg);
+      delete unclustered[lid];
+    });
+
+    expanded=false;
+    btn.classList.remove('active');
+    btn.innerHTML='<i class="ti ti-arrow-autofit-content"></i> Expand clusters';
+  }
+
+  btn.addEventListener('click',function(){
+    if(expanded)collapseAll();else expandAll();
+  });
+
+  // Auto-collapse on zoom/pan so stale expansions don't linger
+  map.on('zoomstart movestart',function(){
+    if(expanded)collapseAll();
+  });
+
+  // Expose collapse so renderMarkers can call it on re-render
+  window._collapseExpandedClusters=collapseAll;
+})();
+
+// ── Show / hide NAP labels ───────────────────────────────────────────────────
+(function(){
+  const btn=document.getElementById('btn-show-labels');
+  let labelsOn=false;
+
+  // labelMarkers: napId → { marker: L.Marker, lat, lng, label, layerColor }
+  // We keep metadata so we can cull/uncull without rebuilding icons
+  const labelMeta={};   // napId → {lat,lng,label,layerColor,layerId}
+  const activeMarkers={}; // napId → L.Marker (only markers currently on map)
+  const labelGroup=L.layerGroup();
+
+  function buildLabelIcon(text,layerColor){
+    let badge='';
+    if(utilizationOn){
+      const pct=getUtil(text);
+      if(pct!==null){
+        const fillColor=utilizationColor(layerColor||'#2563eb',pct);
+        badge='<span class="nap-label-util" style="background:'+fillColor+';color:#fff;">'+pct+'%</span>';
+      }
+    }
+    return L.divIcon({
+      className:'nap-label',
+      html:'<div class="nap-label-inner"><span class="nap-label-text">'+esc(text)+'</span>'+badge+'</div>',
+      iconSize:null,
+      iconAnchor:[-2,-8]
+    });
+  }
+
+  // Rebuild the full metadata index from current state (no DOM work)
+  function indexLabels(){
+    Object.keys(labelMeta).forEach(k=>delete labelMeta[k]);
+    state.layers.forEach(layer=>{
+      if(!layer.visible)return;
+      layer.naps.forEach(n=>{
+        labelMeta[n.id]={lat:n.lat,lng:n.lng,label:n.label||'',layerColor:layer.color,layerId:layer.id};
+      });
+    });
+  }
+
+  // Add/remove markers based on current viewport
+  function cullLabels(){
+    if(!labelsOn)return;
+    const bounds=map.getBounds().pad(0.15); // small buffer so labels pop in slightly before center
+
+    // Remove markers that slipped out of view
+    Object.keys(activeMarkers).forEach(nid=>{
+      const meta=labelMeta[nid];
+      if(!meta||!bounds.contains([meta.lat,meta.lng])){
+        labelGroup.removeLayer(activeMarkers[nid]);
+        delete activeMarkers[nid];
+      }
+    });
+
+    // Add markers now in view that aren't yet active
+    Object.keys(labelMeta).forEach(nid=>{
+      if(activeMarkers[nid])return;
+      const meta=labelMeta[nid];
+      if(!bounds.contains([meta.lat,meta.lng]))return;
+      const m=L.marker([meta.lat,meta.lng],{
+        icon:buildLabelIcon(meta.label,meta.layerColor),
+        interactive:false,
+        keyboard:false
+      });
+      activeMarkers[nid]=m;
+      labelGroup.addLayer(m);
+    });
+  }
+
+  function showLabels(){
+    indexLabels();
+    if(!map.hasLayer(labelGroup))map.addLayer(labelGroup);
+    cullLabels();
+    labelsOn=true;
+    btn.classList.add('active');
+    btn.innerHTML='<i class="ti ti-tag-off"></i> Hide labels';
+  }
+
+  function hideLabels(){
+    if(map.hasLayer(labelGroup))map.removeLayer(labelGroup);
+    // Clear all active markers
+    Object.keys(activeMarkers).forEach(k=>{labelGroup.removeLayer(activeMarkers[k]);delete activeMarkers[k];});
+    labelsOn=false;
+    btn.classList.remove('active');
+    btn.innerHTML='<i class="ti ti-tag"></i> Show labels';
+  }
+
+  btn.addEventListener('click',function(){
+    if(labelsOn)hideLabels();else showLabels();
+  });
+
+  // Cull on pan/zoom — throttled slightly so it doesn't fire mid-animation
+  let cullTimer=null;
+  function scheduleCull(){
+    if(!labelsOn)return;
+    clearTimeout(cullTimer);
+    cullTimer=setTimeout(cullLabels,80);
+  }
+  map.on('moveend zoomend',scheduleCull);
+
+  // Full re-index + re-cull when layers/points change or util toggle fires
+  window._refreshLabels=function(){
+    if(!labelsOn)return;
+    // Clear all active markers so they get fresh icons (handles util badge changes)
+    Object.keys(activeMarkers).forEach(k=>{labelGroup.removeLayer(activeMarkers[k]);delete activeMarkers[k];});
+    indexLabels();
+    cullLabels();
+  };
+})();
+
+// ── Utilization toggle ────────────────────────────────────────────────────────
+(function(){
+  const btn=document.getElementById('btn-util-toggle');
+  const legend=document.getElementById('util-legend');
+  const legendBar=document.getElementById('util-legend-bar');
+
+  function applyUtilColors(){
+    // Fast path: just recolor existing markers using setStyle (Canvas renderer = cheap)
+    state.layers.forEach(layer=>{
+      layer.naps.forEach(n=>{
+        const m=mMap[n.id];
+        if(!m)return;
+        const pct=getUtil(n.label);
+        const newColor=(utilizationOn&&pct!==null)?utilizationColor(layer.color,pct):layer.color;
+        if(m.options.fillColor!==newColor)m.setStyle({fillColor:newColor});
+      });
+    });
+    // Refresh labels (badge show/hide)
+    if(window._refreshLabels)window._refreshLabels();
+    // Legend
+    if(utilizationOn){
+      legendBar.style.background=legendGradient();
+      legend.style.display='block';
+    } else {
+      legend.style.display='none';
+    }
+  }
+
+  btn.addEventListener('click',function(){
+    utilizationOn=!utilizationOn;
+    if(utilizationOn){
+      btn.classList.add('active');
+      btn.innerHTML='<i class="ti ti-chart-pie"></i> Hide Utilization';
+    } else {
+      btn.classList.remove('active');
+      btn.innerHTML='<i class="ti ti-chart-pie"></i> Show Utilization';
+    }
+    applyUtilColors();
+  });
+
+  // Expose so renderMarkers can call after a full re-render
+  window._applyUtilColors=applyUtilColors;
+})();
+
+// ── Update Utilization modal ──────────────────────────────────────────────────
+(function(){
+  const openBtn=document.getElementById('btn-util-update');
+  const panel=document.getElementById('util-panel');
+  const closeBtn=document.getElementById('util-panel-close');
+  const cancelBtn=document.getElementById('util-cancel');
+  const saveBtn=document.getElementById('util-save');
+  const textarea=document.getElementById('util-csv-area');
+  const fileBtn=document.getElementById('btn-util-file');
+  const fileInput=document.getElementById('util-file-input');
+
+  // Prevent map clicks from propagating through the panel
+  L.DomEvent.disableClickPropagation(panel);
+
+  function openUtil(){
+    textarea.value='';
+    panel.style.display='block';
+    // Position top-right (same as edit panel)
+    panel.style.top='10px';panel.style.right='10px';panel.style.left='auto';
+    textarea.focus();
+  }
+  function closeUtil(){panel.style.display='none';textarea.value='';}
+
+  openBtn.addEventListener('click',openUtil);
+  closeBtn.addEventListener('click',closeUtil);
+  cancelBtn.addEventListener('click',closeUtil);
+
+  function applyCSV(text){
+    const lines=text.split('\n').map(l=>l.trim()).filter(l=>l.length);
+    if(!lines.length){toast('No data found');return;}
+
+    // Skip header row if it looks like one
+    const dataLines=lines.filter(l=>{
+      const first=l.split(',')[0].toLowerCase().replace(/"/g,'').trim();
+      return first!=='label'&&first!=='nap'&&first!=='name';
+    });
+
+    let updated=0, notFound=0;
+    const newEntries={};
+
+    dataLines.forEach(line=>{
+      const p=parseCSVLine(line);
+      if(p.length<2)return;
+      const label=(p[0]||'').trim();
+      const pct=parseFloat(p[1]);
+      if(!label||isNaN(pct)){notFound++;return;}
+      newEntries[normLabel(label)]=Math.max(0,Math.min(100,pct));
+      updated++;
+    });
+
+    // Merge into existing utilization (preserve unmentioned entries)
+    Object.assign(utilizationData,newEntries);
+    saveUtil();
+
+    // Re-apply colors if util mode is on
+    if(utilizationOn&&window._applyUtilColors)window._applyUtilColors();
+    // Always refresh popups for next open — done via renderMarkers color path
+    // Also refresh labels
+    if(window._refreshLabels)window._refreshLabels();
+
+    closeUtil();
+    const msg='Updated '+updated+' point'+(updated!==1?'s':'')+(notFound?' ('+notFound+' row'+(notFound!==1?'s':'')+' skipped)':'');
+    toast(msg);
+  }
+
+  saveBtn.addEventListener('click',function(){
+    const text=textarea.value.trim();
+    if(!text){toast('Nothing to apply');return;}
+    applyCSV(text);
+  });
+
+  fileBtn.addEventListener('click',function(){
+    fileInput.value='';fileInput.click();
+  });
+
+  fileInput.addEventListener('change',function(e){
+    const file=e.target.files[0];if(!file)return;
+    const reader=new FileReader();
+    reader.onload=function(ev){
+      textarea.value=ev.target.result.trim();
+    };
+    reader.readAsText(file);
+  });
+
+  // Close when clicking outside the panel
+  document.addEventListener('click',function(e){
+    if(panel.style.display==='block'&&!panel.contains(e.target)&&e.target!==openBtn&&!openBtn.contains(e.target)){
+      closeUtil();
+    }
+  });
+})();
+
+load();renderLayers();
+</script>
+</body>
+</html>
