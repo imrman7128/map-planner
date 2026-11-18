@@ -230,6 +230,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
 #util-csv-area:focus{border-color:#2563eb;background:#fff;}
 .util-file-row{display:flex;align-items:center;gap:8px;margin-top:6px;}
 .util-or{font-size:11px;color:#9ca3af;}
+.util-export-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid #f3f4f6;}
+.util-note{font-size:10px;color:#6b7280;}
 #util-panel-foot{display:flex;gap:6px;padding:0 13px 13px;}
 #util-panel-foot button{flex:1;}
 
@@ -379,12 +381,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
       <button id="util-panel-close"><i class="ti ti-x" style="font-size:16px;"></i></button>
     </div>
     <div id="util-panel-body">
-      <div class="util-hint">Paste CSV with two columns: <code>label,utilization</code><br>Values are percentages (0–100). Header row is optional. Existing entries not in this CSV are preserved.</div>
+      <div class="util-hint">Paste CSV as <code>label,utilization</code> — or <code>layer,label,utilization</code> as produced by Export.<br>Values are percentages (0–100). Header row is optional. Existing entries not in this CSV are preserved.</div>
       <textarea id="util-csv-area" placeholder="NAP-001,72&#10;NAP-002,45&#10;NAP-003,98"></textarea>
       <div class="util-file-row">
         <span class="util-or">or</span>
         <button class="btn sm" id="btn-util-file"><i class="ti ti-upload" style="font-size:13px;"></i> Upload CSV file</button>
         <input type="file" id="util-file-input" accept=".csv" style="display:none"/>
+      </div>
+      <div class="util-export-row">
+        <button class="btn sm" id="btn-util-export"><i class="ti ti-download" style="font-size:13px;"></i> Export current utilization</button>
+        <span class="util-note" id="util-export-note"></span>
       </div>
     </div>
     <div id="util-panel-foot">
@@ -1210,7 +1216,7 @@ document.getElementById('layer-list').addEventListener('dragend',function(){
 function exportLayer(lid){
   const l=state.layers.find(x=>x.id===lid);if(!l)return;
   let csv='lat,lng,label,notes\n';
-  l.naps.forEach(n=>{csv+=n.lat.toFixed(6)+','+n.lng.toFixed(6)+',"'+(n.label||'')+'","'+(n.notes||'')+'"\n';});
+  l.naps.forEach(n=>{csv+=n.lat.toFixed(6)+','+n.lng.toFixed(6)+','+csvq(n.label)+','+csvq(n.notes)+'\n';});
   dl(l.name.replace(/\s+/g,'_')+'_naps.csv',csv);
   toast('Exported '+l.naps.length+' NAPs');
 }
@@ -1218,7 +1224,7 @@ function exportLayer(lid){
 document.getElementById('btn-exp').addEventListener('click',function(){
   if(!state.layers.some(l=>l.naps.length)){toast('No NAPs to export');return;}
   let csv='layer,lat,lng,label,notes\n';
-  state.layers.forEach(l=>{l.naps.forEach(n=>{csv+='"'+(l.name||'')+'",'+n.lat.toFixed(6)+','+n.lng.toFixed(6)+',"'+(n.label||'')+'","'+(n.notes||'')+'"\n';});});
+  state.layers.forEach(l=>{l.naps.forEach(n=>{csv+=csvq(l.name)+','+n.lat.toFixed(6)+','+n.lng.toFixed(6)+','+csvq(n.label)+','+csvq(n.notes)+'\n';});});
   dl('baguio_all_naps.csv',csv);toast('Exported all NAPs');
 });
 
@@ -1442,13 +1448,23 @@ document.getElementById('panel-save').addEventListener('click',function(){
 function parseCSVLine(line){
   const res=[];let cur='',inQ=false;
   for(let i=0;i<line.length;i++){
-    if(line[i]==='"'){inQ=!inQ;}
-    else if(line[i]===','&&!inQ){res.push(cur.trim());cur='';}
-    else{cur+=line[i];}
+    const c=line[i];
+    if(c==='"'){
+      // A doubled quote inside a quoted field is a literal " (RFC 4180).
+      // Without this, a label or note containing a quote cannot survive a
+      // round trip through export and import.
+      if(inQ&&line[i+1]==='"'){cur+='"';i++;}
+      else inQ=!inQ;
+    }
+    else if(c===','&&!inQ){res.push(cur.trim());cur='';}
+    else cur+=c;
   }
   res.push(cur.trim());
   return res;
 }
+
+// Quote a value for CSV output, escaping any embedded quotes
+function csvq(s){return'"'+String(s==null?'':s).replace(/"/g,'""')+'"';}
 
 // NAP label search
 (function(){
@@ -1960,8 +1976,57 @@ function openImport(lid){
   // Prevent map clicks from propagating through the panel
   L.DomEvent.disableClickPropagation(panel);
 
+  const exportBtn=document.getElementById('btn-util-export');
+  const exportNote=document.getElementById('util-export-note');
+
+  // How many NAPs carry a value, and how many stored values match no NAP at all
+  // (the usual reason the utilization view looks like it is doing nothing).
+  function utilStats(){
+    let withData=0,total=0;
+    const seen=new Set();
+    state.layers.forEach(l=>l.naps.forEach(n=>{
+      total++;
+      seen.add(normLabel(n.label));
+      if(getUtil(n.label)!==null)withData++;
+    }));
+    let unmatched=0;
+    Object.keys(utilizationData).forEach(k=>{if(!seen.has(k))unmatched++;});
+    return{withData,total,unmatched};
+  }
+
+  function buildUtilCSV(){
+    let csv='layer,label,utilization\n';
+    const seen=new Set();
+    state.layers.forEach(l=>{
+      l.naps.forEach(n=>{
+        seen.add(normLabel(n.label));
+        const v=getUtil(n.label);
+        // Blank, not 0 — "no value recorded" is different from "0% utilised"
+        csv+=csvq(l.name)+','+csvq(n.label)+','+(v===null?'':v)+'\n';
+      });
+    });
+    // Stored values whose label matches no NAP, surfaced rather than dropped
+    Object.keys(utilizationData).forEach(k=>{
+      if(seen.has(k))return;
+      csv+=csvq('(unmatched)')+','+csvq(k)+','+utilizationData[k]+'\n';
+    });
+    return csv;
+  }
+
+  exportBtn.addEventListener('click',function(){
+    const s=utilStats();
+    if(!s.total&&!s.unmatched){toast('Nothing to export');return;}
+    dl('nap_utilization.csv',buildUtilCSV());
+    toast('Exported '+s.total+' NAPs ('+s.withData+' with utilization'
+      +(s.unmatched?', '+s.unmatched+' unmatched':'')+')');
+  });
+
   function openUtil(){
     textarea.value='';
+    const s=utilStats();
+    exportNote.textContent=s.total
+      ? (s.withData+' of '+s.total+' NAPs have data'+(s.unmatched?' · '+s.unmatched+' unmatched':''))
+      : '';
     panel.style.display='block';
     // Position top-right (same as edit panel)
     panel.style.top='10px';panel.style.right='10px';panel.style.left='auto';
@@ -1977,21 +2042,30 @@ function openImport(lid){
     const lines=text.split('\n').map(l=>l.trim()).filter(l=>l.length);
     if(!lines.length){toast('No data found');return;}
 
-    // Skip header row if it looks like one
-    const dataLines=lines.filter(l=>{
-      const first=l.split(',')[0].toLowerCase().replace(/"/g,'').trim();
-      return first!=='label'&&first!=='nap'&&first!=='name';
-    });
+    // Accept both the hand-written 2-column form (label,utilization) and the
+    // 3-column form that Export produces (layer,label,utilization).
+    // Only the FIRST line can be a header, and it is parsed as CSV rather than
+    // split naively: a layer named "Label, Lower" makes a naive split read
+    // "label" as the first field and throws that whole data row away.
+    const head=parseCSVLine(lines[0])[0].toLowerCase().trim();
+    const isHeader=head==='label'||head==='nap'||head==='name'||head==='layer';
+    const hasLayerCol=head==='layer';
+    const labelIdx=hasLayerCol?1:0, valIdx=hasLayerCol?2:1;
+    const dataLines=isHeader?lines.slice(1):lines;
 
     let updated=0, notFound=0;
     const newEntries={};
 
     dataLines.forEach(line=>{
       const p=parseCSVLine(line);
-      if(p.length<2)return;
-      const label=(p[0]||'').trim();
-      const pct=parseFloat(p[1]);
-      if(!label||isNaN(pct)){notFound++;return;}
+      if(p.length<valIdx+1)return;
+      const label=(p[labelIdx]||'').trim();
+      const raw=(p[valIdx]||'').trim();
+      if(!label){notFound++;return;}
+      // A blank value is the exported "no data yet" placeholder, not an error
+      if(raw==='')return;
+      const pct=parseFloat(raw);
+      if(isNaN(pct)){notFound++;return;}
       newEntries[normLabel(label)]=Math.max(0,Math.min(100,pct));
       updated++;
     });
